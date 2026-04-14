@@ -1,0 +1,52 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@source '../**/*.vue';
+
+/* Forza inclusione classi grid responsive usate in NewsFeed.vue */
+@source inline("grid grid-cols-1 grid-cols-2 grid-cols-3 md:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 lg:grid-cols-3 gap-5 col-span-full");
+
+@theme {
+    --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+    --font-serif: 'Playfair Display', Georgia, serif;
+
+    /* Palette editoriale FlamingNews */
+    --color-paper: #F8F6F1;
+    --color-ink: #1A1A1A;
+    --color-accent: #C41E3A;
+
+    /* Orientamenti politici */
+    --color-lean-left: #2563EB;
+    --color-lean-right: #DC2626;
+    --color-lean-center: #6B7280;
+    --color-lean-international: #D97706;
+}
+
+/* Classi di utilità custom */
+.font-display { font-family: var(--font-serif); }
+
+/* Grid responsive per il feed articoli */
+.articles-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 768px) {
+  .articles-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .articles-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.lean-left         { @apply border-blue-600 bg-blue-50; }
+.lean-right        { @apply border-red-600 bg-red-50; }
+.lean-center       { @apply border-gray-500 bg-gray-50; }
+.lean-international{ @apply border-amber-500 bg-amber-50; }
+
+.badge-left         { @apply bg-blue-600 text-white; }
+.badge-right        { @apply bg-red-600 text-white; }
+.badge-center       { @apply bg-gray-500 text-white; }
+.badge-international{ @apply bg-amber-500 text-white; }

@@ -1,0 +1,23 @@
+# Root
+.env
+*.log
+
+# Backend
+backend/.env
+backend/vendor/
+backend/node_modules/
+backend/storage/logs/*.log
+backend/public/hot
+backend/public/build/
+
+# Mobile
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+
+# Python
+services/clustering/__pycache__/
+services/clustering/*.egg-info/
+services/clustering/venv/
+services/clustering/.env
