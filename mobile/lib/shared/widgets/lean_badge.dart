@@ -6,10 +6,11 @@ class LeanBadge extends StatelessWidget {
   const LeanBadge({super.key, this.lean});
 
   static const _config = {
-    'left':          ('Sinistra',      Color(0xFF2563EB)),
-    'right':         ('Destra',        Color(0xFFDC2626)),
-    'center':        ('Centro',        Color(0xFF6B7280)),
-    'international': ('Internazionale',Color(0xFFD97706)),
+    'left':          ('Sinistra',       Color(0xFF2563EB)),
+    'right':         ('Destra',         Color(0xFFDC2626)),
+    'center':        ('Centro',         Color(0xFF6B7280)),
+    'international': ('Int\'l',         Color(0xFFD97706)),
+    'altro':         ('Altro',          Color(0xFF7C3AED)),
   };
 
   @override

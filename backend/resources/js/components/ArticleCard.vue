@@ -62,135 +62,70 @@
         </div>
       </div>
 
-      <!-- ── Coverage dashboard (solo se ci sono altre fonti) ── -->
-      <template v-if="hasCoverage" @click.stop>
-        <div class="border-t border-gray-100 pt-3 mt-1" @click.stop>
+      <!-- ── Copertura mediale ── -->
+      <div class="border-t border-gray-100 pt-3 mt-2" @click.stop>
 
-          <!-- Barra lean spectrum + contatori -->
-          <button
-            class="w-full text-left"
-            @click.stop="showLeanDetail = !showLeanDetail"
-          >
-            <!-- Label + toggle -->
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Copertura media ({{ article.coverage.length + 1 }} fonti)
-              </span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-3.5 h-3.5 text-gray-400 transition-transform"
-                :class="showLeanDetail ? 'rotate-180' : ''"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+        <!-- Più fonti: mostra ogni giornale con il suo titolo, raggruppato per orientamento -->
+        <template v-if="hasCoverage">
+          <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
+            Queste testate ne hanno parlato
+          </p>
 
-            <!-- Barra proporzionale -->
-            <div class="flex h-2 rounded-full overflow-hidden gap-px">
-              <div
-                v-if="leanCounts.left"
-                class="bg-blue-500 transition-all"
-                :style="{ width: leanPct('left') + '%' }"
-              ></div>
-              <div
-                v-if="leanCounts.center"
-                class="bg-gray-400 transition-all"
-                :style="{ width: leanPct('center') + '%' }"
-              ></div>
-              <div
-                v-if="leanCounts.international"
-                class="bg-amber-400 transition-all"
-                :style="{ width: leanPct('international') + '%' }"
-              ></div>
-              <div
-                v-if="leanCounts.right"
-                class="bg-red-500 transition-all"
-                :style="{ width: leanPct('right') + '%' }"
-              ></div>
-              <div
-                v-if="leanCounts.altro"
-                class="bg-purple-400 transition-all"
-                :style="{ width: leanPct('altro') + '%' }"
-              ></div>
-            </div>
+          <template v-for="lean in ['left','center','right','international','altro']" :key="lean">
+            <div v-if="byLean[lean]?.length" class="mb-4">
 
-            <!-- Legenda contatori -->
-            <div class="flex gap-3 mt-1.5 flex-wrap">
-              <span v-if="leanCounts.left" class="flex items-center gap-1 text-xs text-blue-600">
-                <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
-                Sinistra {{ leanCounts.left }}
-              </span>
-              <span v-if="leanCounts.center" class="flex items-center gap-1 text-xs text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
-                Centro {{ leanCounts.center }}
-              </span>
-              <span v-if="leanCounts.right" class="flex items-center gap-1 text-xs text-red-600">
-                <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
-                Destra {{ leanCounts.right }}
-              </span>
-              <span v-if="leanCounts.international" class="flex items-center gap-1 text-xs text-amber-600">
-                <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-                Int'l {{ leanCounts.international }}
-              </span>
-              <span v-if="leanCounts.altro" class="flex items-center gap-1 text-xs text-purple-600">
-                <span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
-                Altro {{ leanCounts.altro }}
-              </span>
-            </div>
-          </button>
-
-          <!-- Fonti in piccolo -->
-          <div class="flex flex-wrap gap-1.5 mt-2">
-            <a
-              v-for="src in article.coverage"
-              :key="src.id"
-              :href="src.url"
-              target="_blank"
-              rel="noopener"
-              @click.stop
-              class="inline-flex items-center gap-1 text-xs px-2 py-0.5 border rounded-full hover:bg-gray-50 transition-colors"
-              :class="coverageBorderClass(src.lean)"
-              :title="src.title"
-            >
-              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="coverageDotClass(src.lean)"></span>
-              {{ src.source_name ?? src.source_domain }}
-            </a>
-          </div>
-
-          <!-- Dettaglio titoli per orientamento (espandibile) -->
-          <div v-if="showLeanDetail" class="mt-3 space-y-3" @click.stop>
-            <template v-for="lean in ['left','center','right','international','altro']" :key="lean">
-              <div v-if="byLean[lean]?.length">
-                <p class="text-xs font-bold uppercase tracking-wide mb-1.5" :class="leanTitleClass(lean)">
+              <!-- Badge orientamento + numero testate -->
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full text-white" :class="leanBgClass(lean)">
                   {{ leanLabelFull(lean) }}
-                </p>
-                <ul class="space-y-1">
-                  <li v-for="src in byLean[lean]" :key="src.id">
-                    <a
-                      :href="src.url"
-                      target="_blank"
-                      rel="noopener"
-                      @click.stop
-                      class="text-xs text-gray-700 hover:text-[#C41E3A] leading-snug line-clamp-2 block"
-                    >{{ src.title }}</a>
-                    <span class="text-xs text-gray-400">{{ src.source_name }}</span>
-                  </li>
-                </ul>
+                </span>
+                <span class="text-xs text-gray-400">
+                  {{ byLean[lean].length }} {{ byLean[lean].length === 1 ? 'testata' : 'testate' }}
+                </span>
               </div>
-            </template>
+
+              <!-- Lista: una riga per ogni giornale con il suo titolo -->
+              <ul class="space-y-2">
+                <li v-for="src in byLean[lean]" :key="src.id">
+                  <!-- L'articolo corrente (nessun link esterno) -->
+                  <div v-if="src.id === -1" class="pl-3" :style="{ borderLeft: '2px solid ' + leanBorderHex(lean) }">
+                    <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wide mb-0.5">{{ src.source_name }}</span>
+                    <span class="text-xs text-gray-700 leading-snug line-clamp-2 block italic">{{ src.title }}</span>
+                    <span class="text-xs text-gray-300">(questo articolo)</span>
+                  </div>
+                  <!-- Articolo di copertura (link esterno) -->
+                  <a
+                    v-else
+                    :href="src.url"
+                    target="_blank"
+                    rel="noopener"
+                    @click.stop
+                    class="group block pl-3 hover:bg-gray-50 rounded-r transition-colors"
+                    :style="{ borderLeft: '2px solid ' + leanBorderHex(lean) }"
+                  >
+                    <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wide mb-0.5">{{ src.source_name }}</span>
+                    <span class="text-xs text-gray-700 group-hover:text-[#C41E3A] leading-snug line-clamp-2 block">{{ src.title }}</span>
+                  </a>
+                </li>
+              </ul>
+
+            </div>
+          </template>
+        </template>
+
+        <!-- Fonte singola: mostra orientamento del giornale chiaramente -->
+        <div v-else class="flex flex-col gap-1.5">
+          <p class="text-xs text-gray-400">Solo questa testata ha pubblicato la notizia</p>
+          <div class="flex items-center gap-2">
+            <span
+              v-if="article.political_lean"
+              class="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+              :class="leanBgClass(article.political_lean)"
+            >{{ leanLabelFull(article.political_lean) }}</span>
+            <span class="text-xs font-semibold text-gray-600">{{ article.source_name }}</span>
           </div>
         </div>
-      </template>
 
-      <!-- Nessuna coverage ma orientamento noto -->
-      <div v-else class="border-t border-gray-100 pt-2 mt-1 flex items-center gap-2">
-        <span
-          v-if="article.political_lean"
-          class="text-xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
-          :class="leanBadgeClass"
-        >{{ leanLabel }}</span>
-        <span class="text-xs text-gray-300">Solo questa fonte</span>
       </div>
     </div>
   </article>
@@ -208,7 +143,7 @@ defineEmits(['click', 'like']);
 
 const showLeanDetail = ref(false);
 
-// Decode HTML entities in-browser senza v-html (sicuro, no XSS)
+// Decode HTML entities senza v-html (sicuro, no XSS)
 function decodeHtml(str) {
   if (!str) return '';
   const el = document.createElement('textarea');
@@ -216,15 +151,15 @@ function decodeHtml(str) {
   return el.value;
 }
 
-// ── Lean badge principale ──────────────────────────────
+// ── Badge lean in alto alla card ───────────────────────
 const leanMap = {
-  left:          { label: 'Sinistra',      class: 'badge-left' },
-  right:         { label: 'Destra',        class: 'badge-right' },
-  center:        { label: 'Centro',        class: 'badge-center' },
-  international: { label: 'Int\'l',        class: 'badge-international' },
-  altro:         { label: 'Altro',         class: 'badge-altro' },
+  left:          { label: 'Sinistra',       class: 'badge-left' },
+  right:         { label: 'Destra',         class: 'badge-right' },
+  center:        { label: 'Centro',         class: 'badge-center' },
+  international: { label: 'Int\'l',         class: 'badge-international' },
+  altro:         { label: 'Media neutri',   class: 'badge-altro' },
 };
-const leanBadgeClass = computed(() => leanMap[props.article.political_lean]?.class ?? 'badge-center');
+const leanBadgeClass = computed(() => leanMap[props.article.political_lean]?.class ?? '');
 const leanLabel      = computed(() => leanMap[props.article.political_lean]?.label ?? '');
 
 const formattedDate = computed(() => {
@@ -236,7 +171,7 @@ const formattedDate = computed(() => {
 // ── Coverage ──────────────────────────────────────────
 const hasCoverage = computed(() => props.article.coverage?.length > 0);
 
-// Raggruppa coverage per orientamento (include anche la fonte principale)
+// Tutte le fonti: fonte principale (id=-1) + coverage
 const allSources = computed(() => {
   const self = {
     id: -1,
@@ -249,52 +184,45 @@ const allSources = computed(() => {
   return [self, ...(props.article.coverage ?? [])];
 });
 
+// Raggruppa per orientamento
 const byLean = computed(() => {
   const groups = { left: [], center: [], right: [], international: [], altro: [] };
   allSources.value.forEach(src => {
     const l = src.lean ?? 'altro';
-    if (groups[l]) groups[l].push(src);
-    else groups.altro.push(src);
+    (groups[l] ?? groups.altro).push(src);
   });
   return groups;
 });
 
-const leanCounts = computed(() => ({
-  left:          byLean.value.left.length,
-  center:        byLean.value.center.length,
-  right:         byLean.value.right.length,
-  international: byLean.value.international.length,
-  altro:         byLean.value.altro.length,
-}));
-
-const total = computed(() => allSources.value.length);
-
-function leanPct(lean) {
-  return total.value ? (leanCounts.value[lean] / total.value) * 100 : 0;
-}
-
-// ── Colori coverage chips ─────────────────────────────
-const leanColors = {
-  left:          { border: 'border-blue-300',   dot: 'bg-blue-500' },
-  right:         { border: 'border-red-300',    dot: 'bg-red-500' },
-  center:        { border: 'border-gray-300',   dot: 'bg-gray-400' },
-  international: { border: 'border-amber-300',  dot: 'bg-amber-500' },
-  altro:         { border: 'border-purple-300', dot: 'bg-purple-400' },
+// ── Etichette orientamento ────────────────────────────
+const leanLabelMap = {
+  left:          'Sinistra',
+  center:        'Centro',
+  right:         'Destra',
+  international: 'Internazionale',
+  altro:         'Media neutri',
 };
-function coverageBorderClass(lean) { return leanColors[lean]?.border ?? 'border-gray-200'; }
-function coverageDotClass(lean)   { return leanColors[lean]?.dot   ?? 'bg-gray-300'; }
-
-const leanTitleColors = {
-  left:          'text-blue-700',
-  right:         'text-red-700',
-  center:        'text-gray-600',
-  international: 'text-amber-700',
-  altro:         'text-purple-700',
-};
-function leanTitleClass(lean) { return leanTitleColors[lean] ?? 'text-gray-600'; }
-
-const leanLabelMap = { left: 'Sinistra', center: 'Centro', right: 'Destra', international: 'Internazionale', altro: 'Altro' };
 function leanLabelFull(lean) { return leanLabelMap[lean] ?? lean; }
+
+// Classi Tailwind per badge colorato (sfondo pieno)
+const leanBgMap = {
+  left:          'bg-blue-600',
+  center:        'bg-gray-500',
+  right:         'bg-red-600',
+  international: 'bg-amber-500',
+  altro:         'bg-purple-500',
+};
+function leanBgClass(lean) { return leanBgMap[lean] ?? 'bg-gray-400'; }
+
+// Colore bordo sinistro per i titoli (hex diretto, evita purge Tailwind)
+const leanBorderHexMap = {
+  left:          '#3B82F6',
+  center:        '#9CA3AF',
+  right:         '#EF4444',
+  international: '#F59E0B',
+  altro:         '#A855F7',
+};
+function leanBorderHex(lean) { return leanBorderHexMap[lean] ?? '#D1D5DB'; }
 
 // ── Condividi ─────────────────────────────────────────
 function share() {
