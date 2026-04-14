@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../core/config/ads_config.dart';
 import '../../core/providers/articles_provider.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../shared/widgets/ad_banner.dart';
 import 'article_card.dart';
 import 'article_webview_screen.dart';
@@ -46,59 +48,124 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(articlesProvider);
 
+    final auth = ref.watch(authProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6F1),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'FlamingNews',
-          style: TextStyle(
-            color: Color(0xFFC41E3A),
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: SizedBox(
-            height: 48,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              itemCount: _categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (ctx, i) {
-                final cat = _categories[i];
-                final isActive = _activeCategory == cat.$1;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _activeCategory = cat.$1);
-                    ref.read(articlesProvider.notifier).fetchArticles(category: cat.$1);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isActive ? const Color(0xFFC41E3A) : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isActive ? const Color(0xFFC41E3A) : Colors.grey.shade300,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(4 + kToolbarHeight + 48),
+        child: Material(
+          color: Colors.white,
+          elevation: 1,
+          shadowColor: Colors.black12,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Striscia rossa superiore ─────────────────────────
+              Container(height: 4, color: const Color(0xFFC41E3A)),
+
+              // ── Logo + auth ──────────────────────────────────────
+              SizedBox(
+                height: kToolbarHeight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Text.rich(TextSpan(children: [
+                        TextSpan(
+                          text: 'Flaming',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1A1A1A),
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'News',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFFC41E3A),
+                          ),
+                        ),
+                      ])),
+                      const Spacer(),
+                      if (auth.user != null) ...[
+                        Text(
+                          auth.user!.name,
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      GestureDetector(
+                        onTap: () => ref.read(authProvider.notifier).logout(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: const Text(
+                            'ESCI',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                              color: Color(0xFF374151),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      cat.$2,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isActive ? Colors.white : Colors.black54,
-                      ),
-                    ),
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+
+              // ── Barra categorie — underline stile ────────────────
+              Container(
+                height: 48,
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+                ),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: _categories.length,
+                  itemBuilder: (ctx, i) {
+                    final cat = _categories[i];
+                    final isActive = _activeCategory == cat.$1;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _activeCategory = cat.$1);
+                        ref.read(articlesProvider.notifier).fetchArticles(category: cat.$1);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isActive ? const Color(0xFFC41E3A) : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            cat.$2,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isActive ? const Color(0xFFC41E3A) : Colors.black54,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
