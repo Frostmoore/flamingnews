@@ -54,3 +54,4 @@
 .badge-right        { @apply bg-red-600 text-white; }
 .badge-center       { @apply bg-gray-500 text-white; }
 .badge-international{ @apply bg-amber-500 text-white; }
+.badge-altro        { @apply bg-purple-500 text-white; }

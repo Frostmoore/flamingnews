@@ -108,6 +108,11 @@
                 class="bg-red-500 transition-all"
                 :style="{ width: leanPct('right') + '%' }"
               ></div>
+              <div
+                v-if="leanCounts.altro"
+                class="bg-purple-400 transition-all"
+                :style="{ width: leanPct('altro') + '%' }"
+              ></div>
             </div>
 
             <!-- Legenda contatori -->
@@ -127,6 +132,10 @@
               <span v-if="leanCounts.international" class="flex items-center gap-1 text-xs text-amber-600">
                 <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
                 Int'l {{ leanCounts.international }}
+              </span>
+              <span v-if="leanCounts.altro" class="flex items-center gap-1 text-xs text-purple-600">
+                <span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
+                Altro {{ leanCounts.altro }}
               </span>
             </div>
           </button>
@@ -151,7 +160,7 @@
 
           <!-- Dettaglio titoli per orientamento (espandibile) -->
           <div v-if="showLeanDetail" class="mt-3 space-y-3" @click.stop>
-            <template v-for="lean in ['left','center','right','international']" :key="lean">
+            <template v-for="lean in ['left','center','right','international','altro']" :key="lean">
               <div v-if="byLean[lean]?.length">
                 <p class="text-xs font-bold uppercase tracking-wide mb-1.5" :class="leanTitleClass(lean)">
                   {{ leanLabelFull(lean) }}
@@ -174,8 +183,13 @@
         </div>
       </template>
 
-      <!-- Nessuna coverage -->
-      <div v-else class="border-t border-gray-100 pt-2 mt-1">
+      <!-- Nessuna coverage ma orientamento noto -->
+      <div v-else class="border-t border-gray-100 pt-2 mt-1 flex items-center gap-2">
+        <span
+          v-if="article.political_lean"
+          class="text-xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
+          :class="leanBadgeClass"
+        >{{ leanLabel }}</span>
         <span class="text-xs text-gray-300">Solo questa fonte</span>
       </div>
     </div>
@@ -208,6 +222,7 @@ const leanMap = {
   right:         { label: 'Destra',        class: 'badge-right' },
   center:        { label: 'Centro',        class: 'badge-center' },
   international: { label: 'Int\'l',        class: 'badge-international' },
+  altro:         { label: 'Altro',         class: 'badge-altro' },
 };
 const leanBadgeClass = computed(() => leanMap[props.article.political_lean]?.class ?? 'badge-center');
 const leanLabel      = computed(() => leanMap[props.article.political_lean]?.label ?? '');
@@ -235,10 +250,11 @@ const allSources = computed(() => {
 });
 
 const byLean = computed(() => {
-  const groups = { left: [], center: [], right: [], international: [] };
+  const groups = { left: [], center: [], right: [], international: [], altro: [] };
   allSources.value.forEach(src => {
-    const l = src.lean ?? 'center';
+    const l = src.lean ?? 'altro';
     if (groups[l]) groups[l].push(src);
+    else groups.altro.push(src);
   });
   return groups;
 });
@@ -248,6 +264,7 @@ const leanCounts = computed(() => ({
   center:        byLean.value.center.length,
   right:         byLean.value.right.length,
   international: byLean.value.international.length,
+  altro:         byLean.value.altro.length,
 }));
 
 const total = computed(() => allSources.value.length);
@@ -258,10 +275,11 @@ function leanPct(lean) {
 
 // ── Colori coverage chips ─────────────────────────────
 const leanColors = {
-  left:          { border: 'border-blue-300',  dot: 'bg-blue-500' },
-  right:         { border: 'border-red-300',   dot: 'bg-red-500' },
-  center:        { border: 'border-gray-300',  dot: 'bg-gray-400' },
-  international: { border: 'border-amber-300', dot: 'bg-amber-500' },
+  left:          { border: 'border-blue-300',   dot: 'bg-blue-500' },
+  right:         { border: 'border-red-300',    dot: 'bg-red-500' },
+  center:        { border: 'border-gray-300',   dot: 'bg-gray-400' },
+  international: { border: 'border-amber-300',  dot: 'bg-amber-500' },
+  altro:         { border: 'border-purple-300', dot: 'bg-purple-400' },
 };
 function coverageBorderClass(lean) { return leanColors[lean]?.border ?? 'border-gray-200'; }
 function coverageDotClass(lean)   { return leanColors[lean]?.dot   ?? 'bg-gray-300'; }
@@ -271,10 +289,11 @@ const leanTitleColors = {
   right:         'text-red-700',
   center:        'text-gray-600',
   international: 'text-amber-700',
+  altro:         'text-purple-700',
 };
 function leanTitleClass(lean) { return leanTitleColors[lean] ?? 'text-gray-600'; }
 
-const leanLabelMap = { left: 'Sinistra', center: 'Centro', right: 'Destra', international: 'Internazionale' };
+const leanLabelMap = { left: 'Sinistra', center: 'Centro', right: 'Destra', international: 'Internazionale', altro: 'Altro' };
 function leanLabelFull(lean) { return leanLabelMap[lean] ?? lean; }
 
 // ── Condividi ─────────────────────────────────────────
