@@ -28,6 +28,10 @@
 /* Classi di utilità custom */
 .font-display { font-family: var(--font-serif); }
 
+/* Nascondi scrollbar orizzontale nella barra categorie */
+.scrollbar-hide { scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* Grid responsive per il feed articoli */
 .articles-grid {
   display: grid;

@@ -1,38 +1,44 @@
 <template>
   <div class="min-h-screen bg-[#F8F6F1]">
 
-    <!-- Header editoriale -->
-    <header class="border-b border-gray-300 bg-white sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <a href="/" class="font-display text-2xl font-bold text-[#C41E3A] tracking-tight">
-          FlamingNews
+    <!-- Header: striscia rossa + logo + auth -->
+    <header class="sticky top-0 z-30 bg-white shadow-sm">
+      <!-- Striscia rossa superiore -->
+      <div class="bg-[#C41E3A] h-1 w-full"></div>
+
+      <!-- Logo + auth -->
+      <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between border-b border-gray-100">
+        <a href="/" class="font-display text-2xl font-bold text-[#1A1A1A] tracking-tight">
+          Flaming<span class="text-[#C41E3A]">News</span>
         </a>
-        <nav class="flex items-center gap-1 text-sm" x-data>
-          <a href="/" class="px-3 py-1.5 font-semibold text-[#C41E3A] border-b-2 border-[#C41E3A]">Feed</a>
+        <div class="flex items-center gap-3">
+          <span v-if="isAuthenticated" class="text-xs text-gray-400 hidden sm:inline">{{ userName }}</span>
           <button
             @click="toggleAuth"
-            class="ml-4 px-4 py-1.5 text-sm bg-[#C41E3A] text-white rounded hover:bg-red-800 transition-colors"
-          >
-            {{ isAuthenticated ? 'Esci' : 'Accedi' }}
-          </button>
-        </nav>
+            class="px-4 py-1.5 text-xs font-bold tracking-wide border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors uppercase"
+          >{{ isAuthenticated ? 'Esci' : 'Accedi' }}</button>
+        </div>
+      </div>
+
+      <!-- Barra categorie — scrollabile orizzontalmente -->
+      <div class="border-b border-gray-200 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+          <div class="flex overflow-x-auto scrollbar-hide gap-0 -mb-px">
+            <button
+              v-for="cat in categories"
+              :key="String(cat.value)"
+              @click="selectCategory(cat.value)"
+              class="flex-shrink-0 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors duration-150"
+              :class="activeCategory === cat.value
+                ? 'border-[#C41E3A] text-[#C41E3A]'
+                : 'border-transparent text-gray-500 hover:text-[#1A1A1A] hover:border-gray-300'"
+            >{{ cat.label }}</button>
+          </div>
+        </div>
       </div>
     </header>
 
     <div class="max-w-7xl mx-auto px-4 py-6">
-
-      <!-- Filtri categoria -->
-      <div class="flex gap-2 flex-wrap mb-6 pb-4 border-b border-gray-200">
-        <button
-          v-for="cat in categories"
-          :key="cat.value"
-          @click="selectCategory(cat.value)"
-          class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-          :class="activeCategory === cat.value
-            ? 'bg-[#C41E3A] text-white shadow-sm'
-            : 'bg-white text-gray-600 border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A]'"
-        >{{ cat.label }}</button>
-      </div>
 
       <!-- Loading skeleton -->
       <div v-if="loading" class="articles-grid">
@@ -126,7 +132,8 @@ const props = defineProps({
 });
 
 const { articles, meta, loading, error, fetchArticles, toggleLike } = useArticles();
-const { isAuthenticated, logout } = useAuth();
+const { user, isAuthenticated, logout } = useAuth();
+const userName = computed(() => user.value?.name ?? '');
 
 const activeCategory = ref(null);
 
