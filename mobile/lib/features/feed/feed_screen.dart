@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -36,6 +37,36 @@ class FeedScreen extends ConsumerStatefulWidget {
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   String? _activeCategory;
 
+  // ── Ricerca ─────────────────────────────────────────────────────────────
+  bool _searchActive = false;
+  final _searchController = TextEditingController();
+  Timer? _debounce;
+
+  void _onSearchChanged(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (q.isEmpty) {
+        ref.read(articlesProvider.notifier).fetchArticles(category: _activeCategory);
+      } else {
+        ref.read(articlesProvider.notifier).fetchArticles(q: q, category: _activeCategory);
+      }
+    });
+  }
+
+  void _closeSearch() {
+    _searchController.clear();
+    _debounce?.cancel();
+    setState(() => _searchActive = false);
+    ref.read(articlesProvider.notifier).fetchArticles(category: _activeCategory);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,60 +95,113 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               // ── Striscia rossa superiore ─────────────────────────
               Container(height: 4, color: const Color(0xFFC41E3A)),
 
-              // ── Logo + auth ──────────────────────────────────────
+              // ── Logo + auth  /  barra di ricerca ────────────────
               SizedBox(
                 height: kToolbarHeight,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Text.rich(TextSpan(children: [
-                        TextSpan(
-                          text: 'Flaming',
-                          style: GoogleFonts.playfairDisplay(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF1A1A1A),
-                          ),
-                        ),
-                        TextSpan(
-                          text: 'News',
-                          style: GoogleFonts.playfairDisplay(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFFC41E3A),
-                          ),
-                        ),
-                      ])),
-                      const Spacer(),
-                      if (auth.user != null) ...[
-                        Text(
-                          auth.user!.name,
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      GestureDetector(
-                        onTap: () => ref.read(authProvider.notifier).logout(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: const Text(
-                            'ESCI',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
-                              color: Color(0xFF374151),
+                  child: _searchActive
+                      // ── Modalità ricerca ────────────────────────────
+                      ? Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back, size: 20),
+                              color: const Color(0xFF374151),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: _closeSearch,
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                autofocus: true,
+                                onChanged: _onSearchChanged,
+                                style: const TextStyle(fontSize: 15),
+                                decoration: InputDecoration(
+                                  hintText: 'Cerca articoli…',
+                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                            ValueListenableBuilder(
+                              valueListenable: _searchController,
+                              builder: (_, val, __) => val.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.close, size: 18),
+                                      color: Colors.grey,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _onSearchChanged('');
+                                      },
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
+                        )
+                      // ── Modalità normale ────────────────────────────
+                      : Row(
+                          children: [
+                            Text.rich(TextSpan(children: [
+                              TextSpan(
+                                text: 'Flaming',
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1A1A1A),
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'News',
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFC41E3A),
+                                ),
+                              ),
+                            ])),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.search, size: 20),
+                              color: const Color(0xFF374151),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => setState(() => _searchActive = true),
+                            ),
+                            const SizedBox(width: 12),
+                            if (auth.user != null) ...[
+                              Text(
+                                auth.user!.name,
+                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            GestureDetector(
+                              onTap: () => ref.read(authProvider.notifier).logout(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: const Text(
+                                  'ESCI',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8,
+                                    color: Color(0xFF374151),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
 

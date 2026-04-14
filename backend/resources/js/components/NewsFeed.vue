@@ -6,18 +6,49 @@
       <!-- Striscia rossa superiore -->
       <div class="bg-[#C41E3A] h-1 w-full"></div>
 
-      <!-- Logo + auth -->
+      <!-- Logo + auth / barra ricerca -->
       <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between border-b border-gray-100">
-        <a href="/" class="font-display text-2xl font-bold text-[#1A1A1A] tracking-tight">
-          Flaming<span class="text-[#C41E3A]">News</span>
-        </a>
-        <div class="flex items-center gap-3">
-          <span v-if="isAuthenticated" class="text-xs text-gray-400 hidden sm:inline">{{ userName }}</span>
-          <button
-            @click="toggleAuth"
-            class="px-4 py-1.5 text-xs font-bold tracking-wide border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors uppercase"
-          >{{ isAuthenticated ? 'Esci' : 'Accedi' }}</button>
-        </div>
+        <!-- Modalità normale -->
+        <template v-if="!searchActive">
+          <a href="/" class="font-display text-2xl font-bold text-[#1A1A1A] tracking-tight">
+            Flaming<span class="text-[#C41E3A]">News</span>
+          </a>
+          <div class="flex items-center gap-3">
+            <button @click="openSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors" title="Cerca">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+              </svg>
+            </button>
+            <span v-if="isAuthenticated" class="text-xs text-gray-400 hidden sm:inline">{{ userName }}</span>
+            <button
+              @click="toggleAuth"
+              class="px-4 py-1.5 text-xs font-bold tracking-wide border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors uppercase"
+            >{{ isAuthenticated ? 'Esci' : 'Accedi' }}</button>
+          </div>
+        </template>
+
+        <!-- Modalità ricerca -->
+        <template v-else>
+          <button @click="closeSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+          </button>
+          <input
+            ref="searchInput"
+            v-model="searchQuery"
+            @input="onSearchInput"
+            @keydown.esc="closeSearch"
+            type="search"
+            placeholder="Cerca articoli…"
+            class="flex-1 mx-4 text-sm outline-none bg-transparent placeholder-gray-400"
+          />
+          <button v-if="searchQuery" @click="clearSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </template>
       </div>
 
       <!-- Barra categorie — scrollabile orizzontalmente -->
@@ -119,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useArticles } from '../composables/useArticles';
 import { useAuth } from '../composables/useAuth';
 import ArticleCard from './ArticleCard.vue';
@@ -136,6 +167,37 @@ const { user, isAuthenticated, logout } = useAuth();
 const userName = computed(() => user.value?.name ?? '');
 
 const activeCategory = ref(null);
+
+// ── Ricerca ───────────────────────────────────────────────────────────────
+const searchActive = ref(false);
+const searchQuery  = ref('');
+const searchInput  = ref(null);
+let   searchTimer  = null;
+
+async function openSearch() {
+  searchActive.value = true;
+  await nextTick();
+  searchInput.value?.focus();
+}
+
+function closeSearch() {
+  searchActive.value = false;
+  searchQuery.value  = '';
+  clearTimeout(searchTimer);
+  load(1);
+}
+
+function clearSearch() {
+  searchQuery.value = '';
+  clearTimeout(searchTimer);
+  load(1);
+  searchInput.value?.focus();
+}
+
+function onSearchInput() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => load(1), 350);
+}
 
 // Intercala un placeholder annuncio ogni N articoli (escluso il primo in evidenza)
 const feedItems = computed(() => {
@@ -169,7 +231,7 @@ const categories = [
 ];
 
 async function load(page = 1) {
-  await fetchArticles({ category: activeCategory.value, page });
+  await fetchArticles({ category: activeCategory.value, page, q: searchQuery.value });
 }
 
 function selectCategory(value) {

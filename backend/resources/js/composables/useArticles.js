@@ -15,11 +15,21 @@ export function useArticles() {
     const loading = ref(false);
     const error = ref(null);
 
-    async function fetchArticles({ category = null, page = 1, perPage = 20 } = {}) {
+    async function fetchArticles({ category = null, page = 1, perPage = 20, q = '' } = {}) {
         loading.value = true;
         error.value = null;
 
         try {
+            // Ricerca: singola chiamata con parametro q
+            if (q) {
+                const params = { q, page, per_page: perPage };
+                if (category) params.category = category;
+                const res = await axios.get('/api/articles', { params });
+                articles.value = res.data.data;
+                meta.value = res.data.meta;
+                return;
+            }
+
             if (!category) {
                 // Una chiamata per ogni categoria in parallelo
                 const responses = await Promise.all(

@@ -46,12 +46,31 @@ class ArticlesNotifier extends StateNotifier<ArticlesState> {
 
   ArticlesNotifier(this._ref) : super(const ArticlesState());
 
-  Future<void> fetchArticles({String? category, int page = 1}) async {
+  Future<void> fetchArticles({String? category, int page = 1, String? q}) async {
     _activeCategory = category;
     state = state.copyWith(loading: true, error: null);
 
     try {
       final dio = _ref.read(dioProvider);
+
+      // Ricerca: singola chiamata con parametro q
+      if (q != null && q.isNotEmpty) {
+        final params = <String, dynamic>{'q': q, 'page': page, 'per_page': 20};
+        if (category != null) params['category'] = category;
+        final response = await dio.get('/articles', queryParameters: params);
+        final data = response.data as Map<String, dynamic>;
+        final items = (data['data'] as List<dynamic>)
+            .map((e) => Article.fromJson(e as Map<String, dynamic>))
+            .toList();
+        final meta = data['meta'] as Map<String, dynamic>;
+        state = state.copyWith(
+          articles: items,
+          currentPage: meta['current_page'] as int,
+          lastPage: meta['last_page'] as int,
+          loading: false,
+        );
+        return;
+      }
 
       if (category == null) {
         // Una chiamata per ogni categoria in parallelo

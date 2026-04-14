@@ -25,6 +25,14 @@ class ArticleController extends Controller
             $query->where('category', $request->category);
         }
 
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('title', 'LIKE', "%{$q}%")
+                    ->orWhere('description', 'LIKE', "%{$q}%");
+            });
+        }
+
         $articles = $query->paginate($request->integer('per_page', 20));
 
         // IDs già messi in like dall'utente autenticato (solo per questa pagina)
