@@ -79,7 +79,7 @@
               Queste testate ne hanno parlato
             </p>
 
-            <template v-for="lean in ['left','center','right','international','altro']" :key="lean">
+            <template v-for="lean in ['left','center-left','center','center-right','right','international','altro']" :key="lean">
               <div v-if="byLean[lean]?.length" class="mb-4">
 
                 <!-- Badge orientamento + numero testate -->
@@ -169,11 +169,13 @@ function decodeHtml(str) {
 
 // ── Badge lean in alto alla card ───────────────────────
 const leanMap = {
-  left:          { label: 'Sinistra',       class: 'badge-left' },
-  right:         { label: 'Destra',         class: 'badge-right' },
-  center:        { label: 'Centro',         class: 'badge-center' },
-  international: { label: 'Int\'l',         class: 'badge-international' },
-  altro:         { label: 'Media neutri',   class: 'badge-altro' },
+  left:          { label: 'Sinistra',        class: 'badge-left' },
+  'center-left': { label: 'Centro-sin.',     class: 'badge-center-left' },
+  center:        { label: 'Centro',          class: 'badge-center' },
+  'center-right':{ label: 'Centro-des.',     class: 'badge-center-right' },
+  right:         { label: 'Destra',          class: 'badge-right' },
+  international: { label: 'Int\'l',          class: 'badge-international' },
+  altro:         { label: 'Media neutri',    class: 'badge-altro' },
 };
 const leanBadgeClass = computed(() => leanMap[props.article.political_lean]?.class ?? '');
 const leanLabel      = computed(() => leanMap[props.article.political_lean]?.label ?? '');
@@ -185,68 +187,79 @@ const formattedDate = computed(() => {
 });
 
 // ── Coverage ──────────────────────────────────────────
-const hasCoverage = computed(() => props.article.coverage?.length > 0);
+const hasCoverage = computed(() => uniqueCoverage.value.length > 0);
 
-// Raggruppa la coverage per orientamento (solo le altre testate, non l'articolo corrente)
+// ── Colori per lean (usati in più posti) ──────────────
+const leanHex = {
+  left:          '#1D4ED8', // blu scuro
+  'center-left': '#60A5FA', // blu chiaro
+  center:        '#6B7280', // grigio
+  'center-right':'#FB923C', // arancione
+  right:         '#DC2626', // rosso
+  international: '#D97706', // ambra
+  altro:         '#7C3AED', // viola
+};
+
+// Deduplica coverage: una sola voce per testata (source_domain)
+const uniqueCoverage = computed(() => {
+  const seen = new Set([props.article.source_domain]);
+  return (props.article.coverage ?? []).filter(src => {
+    if (seen.has(src.source_domain)) return false;
+    seen.add(src.source_domain);
+    return true;
+  });
+});
+
+// Raggruppa la coverage per orientamento
 const byLean = computed(() => {
-  const groups = { left: [], center: [], right: [], international: [], altro: [] };
-  (props.article.coverage ?? []).forEach(src => {
+  const groups = { left: [], 'center-left': [], center: [], 'center-right': [], right: [], international: [], altro: [] };
+  uniqueCoverage.value.forEach(src => {
     const l = src.lean ?? 'altro';
     (groups[l] ?? groups.altro).push(src);
   });
   return groups;
 });
 
-// ── Barra coverage (include articolo principale + coverage) ───────────────
+// ── Barra coverage ────────────────────────────────────
 const leanBarCounts = computed(() => {
-  const counts = { left: 0, center: 0, right: 0, international: 0, altro: 0 };
+  const counts = { left: 0, 'center-left': 0, center: 0, 'center-right': 0, right: 0, international: 0, altro: 0 };
   const mainLean = props.article.political_lean ?? 'altro';
-  counts[mainLean] = 1;
-  (props.article.coverage ?? []).forEach(src => {
+  if (mainLean in counts) counts[mainLean] = 1; else counts.altro = 1;
+  uniqueCoverage.value.forEach(src => {
     const l = src.lean ?? 'altro';
-    if (l in counts) counts[l]++;
-    else counts.altro++;
+    if (l in counts) counts[l]++; else counts.altro++;
   });
   return counts;
 });
-const leanBarOrder = ['left', 'center', 'right', 'international', 'altro'];
-const leanSolidHex = {
-  left:          '#2563EB',
-  center:        '#6B7280',
-  right:         '#DC2626',
-  international: '#D97706',
-  altro:         '#7C3AED',
-};
+const leanBarOrder = ['left', 'center-left', 'center', 'center-right', 'right', 'international', 'altro'];
+const leanSolidHex = leanHex;
 
 // ── Etichette orientamento ────────────────────────────
 const leanLabelMap = {
   left:          'Sinistra',
+  'center-left': 'Centro-sinistra',
   center:        'Centro',
+  'center-right':'Centro-destra',
   right:         'Destra',
   international: 'Internazionale',
   altro:         'Media neutri',
 };
 function leanLabelFull(lean) { return leanLabelMap[lean] ?? lean; }
 
-// Classi Tailwind per badge colorato (sfondo pieno)
+// Classi Tailwind per badge colorato (sfondo pieno) — usate solo dove non serve hex diretto
 const leanBgMap = {
-  left:          'bg-blue-600',
+  left:          'bg-blue-700',
+  'center-left': 'bg-blue-400',
   center:        'bg-gray-500',
+  'center-right':'bg-orange-400',
   right:         'bg-red-600',
   international: 'bg-amber-500',
   altro:         'bg-purple-500',
 };
 function leanBgClass(lean) { return leanBgMap[lean] ?? 'bg-gray-400'; }
 
-// Colore bordo sinistro per i titoli (hex diretto, evita purge Tailwind)
-const leanBorderHexMap = {
-  left:          '#3B82F6',
-  center:        '#9CA3AF',
-  right:         '#EF4444',
-  international: '#F59E0B',
-  altro:         '#A855F7',
-};
-function leanBorderHex(lean) { return leanBorderHexMap[lean] ?? '#D1D5DB'; }
+// Colore bordo sinistro per i titoli (hex diretto)
+function leanBorderHex(lean) { return leanHex[lean] ?? '#D1D5DB'; }
 
 // ── Condividi ─────────────────────────────────────────
 function share() {

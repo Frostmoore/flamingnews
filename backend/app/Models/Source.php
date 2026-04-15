@@ -13,6 +13,7 @@ class Source extends Model
         'country',
         'active',
         'tier',
+        'feed_url',
     ];
 
     protected function casts(): array

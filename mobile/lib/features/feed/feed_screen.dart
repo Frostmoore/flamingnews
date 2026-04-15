@@ -11,7 +11,7 @@ import 'article_card.dart';
 import 'article_webview_screen.dart';
 
 const _categories = [
-  (null,          'Tutte'),
+  (null,          'Temi'),
   ('politica',    'Politica'),
   ('economia',    'Economia'),
   ('esteri',      'Esteri'),
@@ -265,37 +265,71 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         final itemCount = state.articles.length +
             (state.articles.length / freq).floor();
 
-        return ListView.separated(
-          itemCount: itemCount,
-          separatorBuilder: (_, __) => const SizedBox(height: 1),
-          itemBuilder: (ctx, i) {
-            // Ogni (freq + 1) slot il (freq)-esimo è un banner
-            if ((i + 1) % (freq + 1) == 0) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: AdBanner(),
-              );
+        // Aggiunge 1 slot finale: loading indicator o sentinel
+        final extraSlots = 1;
+
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollEndNotification) {
+              final px = notification.metrics.pixels;
+              final max = notification.metrics.maxScrollExtent;
+              if (max > 0 && px >= max - 400) {
+                ref.read(articlesProvider.notifier).nextPage();
+              }
             }
-            // Indice reale nell'array articoli
-            final articleIndex = i - (i / (freq + 1)).floor();
-            if (articleIndex >= state.articles.length) {
-              return const SizedBox.shrink();
-            }
-            final article = state.articles[articleIndex];
-            return ArticleCard(
-              article: article,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ArticleWebViewScreen(
-                    url: article.url,
-                    title: article.title,
+            return false;
+          },
+          child: ListView.separated(
+            itemCount: itemCount + extraSlots,
+            separatorBuilder: (_, __) => const SizedBox(height: 1),
+            itemBuilder: (ctx, i) {
+              // Slot finale: spinner o spazio
+              if (i == itemCount) {
+                if (state.loadingMore) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFC41E3A),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox(height: 24);
+              }
+
+              // Ogni (freq + 1) slot il (freq)-esimo è un banner
+              if ((i + 1) % (freq + 1) == 0) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: AdBanner(),
+                );
+              }
+              // Indice reale nell'array articoli
+              final articleIndex = i - (i / (freq + 1)).floor();
+              if (articleIndex >= state.articles.length) {
+                return const SizedBox.shrink();
+              }
+              final article = state.articles[articleIndex];
+              return ArticleCard(
+                article: article,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ArticleWebViewScreen(
+                      url: article.url,
+                      title: article.title,
+                    ),
                   ),
                 ),
-              ),
-              onLike: () => ref.read(articlesProvider.notifier).toggleLike(article.id),
-            );
-          },
+                onLike: () => ref.read(articlesProvider.notifier).toggleLike(article.id),
+              );
+            },
+          ),
         );
       }),
     );

@@ -20,7 +20,7 @@ class FetchNewsCommand extends Command
 
         $this->info('Avvio FetchNewsJob...');
         (new FetchNewsJob())->handle(
-            app(\App\Services\WorldNewsService::class),
+            app(\App\Services\RssFetcherService::class),
             app(\App\Services\ClusteringService::class),
         );
 

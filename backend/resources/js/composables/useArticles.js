@@ -39,26 +39,12 @@ export function useArticles() {
             }
 
             if (!category) {
-                // Una chiamata per ogni categoria in parallelo
-                const responses = await Promise.all(
-                    ALL_CATEGORIES.map(cat =>
-                        axios.get('/api/articles', {
-                            params: { category: cat, page: 1, per_page: PER_CATEGORY },
-                        })
-                    )
-                );
-
-                // Unisci e ordina per data
-                const all = responses.flatMap(r => r.data.data);
-                all.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
-
-                articles.value = all;
-                meta.value = {
-                    current_page: 1,
-                    last_page: 1,
-                    per_page: all.length,
-                    total: all.length,
-                };
+                // Tab "Temi": singola chiamata paginata, il backend filtra per multi-testata
+                const res = await axios.get('/api/articles', {
+                    params: { page, per_page: perPage },
+                });
+                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
+                meta.value = res.data.meta;
             } else {
                 // Singola categoria: lazy load con paginazione
                 const res = await axios.get('/api/articles', {

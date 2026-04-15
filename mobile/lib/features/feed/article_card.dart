@@ -203,6 +203,12 @@ class ArticleCard extends StatelessWidget {
                 ],
               ),
             ),
+
+            // ── Barra orientamenti (bordo inferiore) ────────────
+            _CoverageBar(
+              coverage: article.coverage,
+              selfLean: article.politicalLean,
+            ),
           ],
         ),
       ),
@@ -355,6 +361,43 @@ class _SingleSourceSection extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+// ── Barra orientamenti ─────────────────────────────────────────────────────
+class _CoverageBar extends StatelessWidget {
+  final List<CoverageSource> coverage;
+  final String? selfLean;
+
+  const _CoverageBar({required this.coverage, this.selfLean});
+
+  @override
+  Widget build(BuildContext context) {
+    // Conta le testate per orientamento (incluso l'articolo principale)
+    final counts = <String, int>{};
+    if (selfLean != null) counts[selfLean!] = 1;
+    for (final src in coverage) {
+      final l = src.lean ?? 'altro';
+      counts[l] = (counts[l] ?? 0) + 1;
+    }
+
+    final segments = _leanOrder
+        .where((l) => (counts[l] ?? 0) > 0)
+        .toList();
+
+    if (segments.isEmpty) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 12,
+      child: Row(
+        children: segments
+            .map((l) => Flexible(
+                  flex: counts[l]!,
+                  child: Container(color: _leanColors[l]!),
+                ))
+            .toList(),
+      ),
     );
   }
 }

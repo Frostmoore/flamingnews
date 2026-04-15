@@ -25,9 +25,20 @@ class ArticleController extends Controller
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
-        } elseif ($user && !empty($user->preferred_categories)) {
-            // Tab "Tutte": mostra solo le categorie scelte dall'utente
-            $query->whereIn('category', $user->preferred_categories);
+        } else {
+            // Tab "Temi": solo articoli coperti da più testate DIVERSE
+            $query->whereNotNull('topic_id')
+                  ->whereExists(function ($sub) {
+                      $sub->selectRaw('1')
+                          ->from('articles as a2')
+                          ->whereColumn('a2.topic_id', 'articles.topic_id')
+                          ->whereColumn('a2.source_domain', '!=', 'articles.source_domain');
+                  });
+
+            $user = $request->user();
+            if ($user && !empty($user->preferred_categories)) {
+                $query->whereIn('category', $user->preferred_categories);
+            }
         }
 
         if ($request->filled('q')) {

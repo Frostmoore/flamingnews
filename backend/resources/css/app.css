@@ -19,10 +19,12 @@
     --color-accent: #C41E3A;
 
     /* Orientamenti politici */
-    --color-lean-left: #2563EB;
-    --color-lean-right: #DC2626;
-    --color-lean-center: #6B7280;
-    --color-lean-international: #D97706;
+    --color-lean-left:         #1D4ED8;
+    --color-lean-center-left:  #60A5FA;
+    --color-lean-center:       #6B7280;
+    --color-lean-center-right: #FB923C;
+    --color-lean-right:        #DC2626;
+    --color-lean-international:#D97706;
 }
 
 /* Classi di utilità custom */
@@ -45,13 +47,17 @@
   .articles-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-.lean-left         { @apply border-blue-600 bg-blue-50; }
-.lean-right        { @apply border-red-600 bg-red-50; }
+.lean-left         { @apply border-blue-700 bg-blue-50; }
+.lean-center-left  { @apply border-blue-400 bg-blue-50; }
 .lean-center       { @apply border-gray-500 bg-gray-50; }
+.lean-center-right { @apply border-orange-400 bg-orange-50; }
+.lean-right        { @apply border-red-600 bg-red-50; }
 .lean-international{ @apply border-amber-500 bg-amber-50; }
 
-.badge-left         { @apply bg-blue-600 text-white; }
-.badge-right        { @apply bg-red-600 text-white; }
+.badge-left         { @apply bg-blue-700 text-white; }
+.badge-center-left  { @apply bg-blue-400 text-white; }
 .badge-center       { @apply bg-gray-500 text-white; }
+.badge-center-right { @apply bg-orange-400 text-white; }
+.badge-right        { @apply bg-red-600 text-white; }
 .badge-international{ @apply bg-amber-500 text-white; }
 .badge-altro        { @apply bg-purple-500 text-white; }

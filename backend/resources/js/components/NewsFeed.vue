@@ -99,9 +99,9 @@
       <!-- Griglia articoli — layout editoriale asimmetrico -->
       <template v-else>
         <!-- Primo articolo in evidenza -->
-        <div v-if="visibleArticles.length > 0" class="mb-6">
+        <div v-if="articles.length > 0" class="mb-6">
           <ArticleCard
-            :article="visibleArticles[0]"
+            :article="articles[0]"
             :featured="true"
             @click="openArticle"
             @like="toggleLike"
@@ -163,7 +163,6 @@ const userName = computed(() => user.value?.name ?? '');
 
 const activeCategory = ref(null);
 const sentinel = ref(null);
-const displayLimit = ref(10);
 let observer = null;
 
 // ── Ricerca ───────────────────────────────────────────────────────────────
@@ -197,13 +196,10 @@ function onSearchInput() {
   searchTimer = setTimeout(() => load(1), 350);
 }
 
-// Articoli visibili in base al displayLimit
-const visibleArticles = computed(() => articles.value.slice(0, displayLimit.value));
-
 // Intercala un placeholder annuncio ogni N articoli (escluso il primo in evidenza)
 const feedItems = computed(() => {
   const freq = parseInt(props.adsenseFrequency) || 6;
-  const rest = visibleArticles.value.slice(1);
+  const rest = articles.value.slice(1);
   const items = [];
   rest.forEach((article, i) => {
     if (i > 0 && i % freq === 0) {
@@ -232,23 +228,13 @@ const categories = [
 ];
 
 async function load(page = 1) {
-  if (page === 1) displayLimit.value = 10;
   await fetchArticles({ category: activeCategory.value, page, q: searchQuery.value });
   if (page === 1) await nextTick().then(setupObserver);
 }
 
 async function loadMore() {
   if (loadingMore.value || loading.value) return;
-  // Mostra altri articoli già in memoria (es. "Tutte" o pagine già caricate)
-  if (displayLimit.value < articles.value.length) {
-    displayLimit.value += 10;
-    return;
-  }
-  // Altrimenti chiedi la pagina successiva al server
-  if (hasMore()) {
-    await load(meta.value.current_page + 1);
-    displayLimit.value = articles.value.length;
-  }
+  if (hasMore()) await load(meta.value.current_page + 1);
 }
 
 function setupObserver() {
