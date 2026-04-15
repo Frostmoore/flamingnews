@@ -6,17 +6,19 @@ class LeanBadge extends StatelessWidget {
   const LeanBadge({super.key, this.lean});
 
   static const _config = {
-    'left':          ('Sinistra',       Color(0xFF2563EB)),
-    'right':         ('Destra',         Color(0xFFDC2626)),
+    'left':          ('Sinistra',       Color(0xFF1D4ED8)),
+    'center-left':   ('Centro-sin.',    Color(0xFF60A5FA)),
     'center':        ('Centro',         Color(0xFF6B7280)),
+    'center-right':  ('Centro-des.',    Color(0xFFFB923C)),
+    'right':         ('Destra',         Color(0xFFDC2626)),
     'international': ('Int\'l',         Color(0xFFD97706)),
-    'altro':         ('Altro',          Color(0xFF7C3AED)),
+    'altro':         ('Media neutri',   Color(0xFF7C3AED)),
   };
 
   @override
   Widget build(BuildContext context) {
-    final cfg = _config[lean] ?? ('', const Color(0xFF6B7280));
-    if (cfg.$1.isEmpty) return const SizedBox.shrink();
+    final cfg = _config[lean];
+    if (cfg == null || cfg.$1.isEmpty) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

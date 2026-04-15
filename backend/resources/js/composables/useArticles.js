@@ -18,7 +18,7 @@ export function useArticles() {
 
     const hasMore = () => meta.value.current_page < meta.value.last_page;
 
-    async function fetchArticles({ category = null, page = 1, perPage = 10, q = '' } = {}) {
+    async function fetchArticles({ category = null, tab = null, page = 1, perPage = 10, q = '' } = {}) {
         const appending = page > 1;
         if (appending) {
             loadingMore.value = true;
@@ -28,31 +28,24 @@ export function useArticles() {
         error.value = null;
 
         try {
-            // Ricerca: singola chiamata con parametro q
-            if (q) {
-                const params = { q, page, per_page: perPage };
-                if (category) params.category = category;
-                const res = await axios.get('/api/articles', { params });
-                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
-                meta.value = res.data.meta;
-                return;
-            }
+            const params = { page, per_page: perPage };
 
-            if (!category) {
-                // Tab "Temi": singola chiamata paginata, il backend filtra per multi-testata
-                const res = await axios.get('/api/articles', {
-                    params: { page, per_page: perPage },
-                });
-                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
-                meta.value = res.data.meta;
-            } else {
-                // Singola categoria: lazy load con paginazione
-                const res = await axios.get('/api/articles', {
-                    params: { category, page, per_page: perPage },
-                });
-                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
-                meta.value = res.data.meta;
+            if (q) {
+                // Ricerca: singola chiamata con parametro q
+                params.q = q;
+                if (category) params.category = category;
+            } else if (category) {
+                // Singola categoria
+                params.category = category;
+            } else if (tab === 'tutte') {
+                // Tutte: tutti gli articoli, backend non filtra
+                params.tab = 'tutte';
             }
+            // else: Temi — nessun param extra, backend applica filtro 4+ testate
+
+            const res = await axios.get('/api/articles', { params });
+            articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
+            meta.value = res.data.meta;
         } catch (e) {
             error.value = e.response?.data?.message || 'Errore nel caricamento degli articoli.';
         } finally {

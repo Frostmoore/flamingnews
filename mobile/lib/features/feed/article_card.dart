@@ -7,11 +7,13 @@ import '../../core/models/article.dart';
 import '../../shared/widgets/lean_badge.dart';
 
 // ── Costanti orientamento ──────────────────────────────────────────────────
-const _leanOrder = ['left', 'center', 'right', 'international', 'altro'];
+const _leanOrder = ['left', 'center-left', 'center', 'center-right', 'right', 'international', 'altro'];
 
 const _leanColors = {
-  'left':          Color(0xFF2563EB),
+  'left':          Color(0xFF1D4ED8),
+  'center-left':   Color(0xFF60A5FA),
   'center':        Color(0xFF6B7280),
+  'center-right':  Color(0xFFFB923C),
   'right':         Color(0xFFDC2626),
   'international': Color(0xFFD97706),
   'altro':         Color(0xFF7C3AED),
@@ -19,7 +21,9 @@ const _leanColors = {
 
 const _leanBorderColors = {
   'left':          Color(0xFF93C5FD),
+  'center-left':   Color(0xFFBFDBFE),
   'center':        Color(0xFFD1D5DB),
+  'center-right':  Color(0xFFFED7AA),
   'right':         Color(0xFFFCA5A5),
   'international': Color(0xFFFCD34D),
   'altro':         Color(0xFFDDD6FE),
@@ -27,7 +31,9 @@ const _leanBorderColors = {
 
 const _leanLabels = {
   'left':          'Sinistra',
+  'center-left':   'Centro-sinistra',
   'center':        'Centro',
+  'center-right':  'Centro-destra',
   'right':         'Destra',
   'international': 'Internazionale',
   'altro':         'Media neutri',
@@ -46,10 +52,23 @@ class ArticleCard extends StatelessWidget {
     this.onLike,
   });
 
-  /// Raggruppa la coverage per orientamento (solo le altre testate).
-  Map<String, List<Map<String, dynamic>>> get _byLean {
-    final groups = {for (final l in _leanOrder) l: <Map<String, dynamic>>[]};
+  /// Coverage deduplicata per source_domain (esclude il dominio dell'articolo principale).
+  List<CoverageSource> get _uniqueCoverage {
+    final seen = <String?>{article.sourceDomain};
+    final result = <CoverageSource>[];
     for (final src in article.coverage) {
+      if (!seen.contains(src.sourceDomain)) {
+        seen.add(src.sourceDomain);
+        result.add(src);
+      }
+    }
+    return result;
+  }
+
+  /// Raggruppa la coverage deduplicata per orientamento.
+  Map<String, List<Map<String, dynamic>>> _byLean(List<CoverageSource> unique) {
+    final groups = {for (final l in _leanOrder) l: <Map<String, dynamic>>[]};
+    for (final src in unique) {
       final l = src.lean ?? 'altro';
       (groups[l] ??= []).add({
         'id':          src.id,
@@ -70,7 +89,8 @@ class ArticleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasCoverage = article.coverage.isNotEmpty;
+    final unique = _uniqueCoverage;
+    final hasCoverage = unique.isNotEmpty;
 
     return GestureDetector(
       onTap: onTap,
@@ -194,7 +214,7 @@ class ArticleCard extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   if (hasCoverage)
-                    _CoverageSection(byLean: _byLean)
+                    _CoverageSection(byLean: _byLean(unique))
                   else
                     _SingleSourceSection(
                       lean: article.politicalLean,
@@ -206,7 +226,7 @@ class ArticleCard extends StatelessWidget {
 
             // ── Barra orientamenti (bordo inferiore) ────────────
             _CoverageBar(
-              coverage: article.coverage,
+              uniqueCoverage: unique,
               selfLean: article.politicalLean,
             ),
           ],
@@ -367,17 +387,17 @@ class _SingleSourceSection extends StatelessWidget {
 
 // ── Barra orientamenti ─────────────────────────────────────────────────────
 class _CoverageBar extends StatelessWidget {
-  final List<CoverageSource> coverage;
+  final List<CoverageSource> uniqueCoverage;
   final String? selfLean;
 
-  const _CoverageBar({required this.coverage, this.selfLean});
+  const _CoverageBar({required this.uniqueCoverage, this.selfLean});
 
   @override
   Widget build(BuildContext context) {
-    // Conta le testate per orientamento (incluso l'articolo principale)
+    // Conta una sola volta per testata (già deduplicata)
     final counts = <String, int>{};
     if (selfLean != null) counts[selfLean!] = 1;
-    for (final src in coverage) {
+    for (final src in uniqueCoverage) {
       final l = src.lean ?? 'altro';
       counts[l] = (counts[l] ?? 0) + 1;
     }

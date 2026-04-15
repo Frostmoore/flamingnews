@@ -12,6 +12,7 @@ import 'article_webview_screen.dart';
 
 const _categories = [
   (null,          'Temi'),
+  ('__all__',     'Tutte'),
   ('politica',    'Politica'),
   ('economia',    'Economia'),
   ('esteri',      'Esteri'),

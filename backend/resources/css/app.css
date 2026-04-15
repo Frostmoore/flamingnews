@@ -34,17 +34,29 @@
 .scrollbar-hide { scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-/* Grid responsive per il feed articoli */
+/* Masonry layout per il feed articoli (CSS multi-column) */
 .articles-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.25rem;
+  column-count: 1;
+  column-gap: 1.25rem;
 }
 @media (min-width: 768px) {
-  .articles-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .articles-grid { column-count: 2; }
 }
 @media (min-width: 1024px) {
-  .articles-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .articles-grid { column-count: 3; }
+}
+
+/* Ogni card non si spezza tra colonne */
+.articles-grid > * {
+  display: inline-block;
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: 1.25rem;
+}
+
+/* Gli annunci full-width attraversano tutte le colonne */
+.articles-grid > .col-span-full {
+  column-span: all;
 }
 
 .lean-left         { @apply border-blue-700 bg-blue-50; }

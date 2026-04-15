@@ -25,15 +25,14 @@ class ArticleController extends Controller
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
+        } elseif ($request->input('tab') === 'tutte') {
+            // Tab "Tutte": tutti gli articoli, nessun filtro aggiuntivo
         } else {
-            // Tab "Temi": solo articoli coperti da più testate DIVERSE
+            // Tab "Temi": solo articoli coperti da 4+ testate DIVERSE
             $query->whereNotNull('topic_id')
-                  ->whereExists(function ($sub) {
-                      $sub->selectRaw('1')
-                          ->from('articles as a2')
-                          ->whereColumn('a2.topic_id', 'articles.topic_id')
-                          ->whereColumn('a2.source_domain', '!=', 'articles.source_domain');
-                  });
+                  ->whereRaw(
+                      '(SELECT COUNT(DISTINCT source_domain) FROM articles AS a2 WHERE a2.topic_id = articles.topic_id) >= 4'
+                  );
 
             $user = $request->user();
             if ($user && !empty($user->preferred_categories)) {

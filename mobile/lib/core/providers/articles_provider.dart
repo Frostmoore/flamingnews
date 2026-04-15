@@ -2,13 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../models/article.dart';
 
-const _allCategories = [
-  'politica', 'economia', 'esteri', 'tecnologia',
-  'sport', 'cultura', 'generale', 'scienza', 'salute',
-  'ambiente', 'istruzione', 'cibo', 'viaggi',
-];
-const _perCategory = 6;
-
 class ArticlesState {
   final List<Article> articles;
   final int currentPage;
@@ -48,7 +41,7 @@ class ArticlesState {
 
 class ArticlesNotifier extends StateNotifier<ArticlesState> {
   final Ref _ref;
-  String? _activeCategory;
+  String? _activeCategory; // null = Temi, '__all__' = Tutte, string = categoria
   String? _activeQuery;
 
   ArticlesNotifier(this._ref) : super(const ArticlesState());
@@ -66,60 +59,32 @@ class ArticlesNotifier extends StateNotifier<ArticlesState> {
 
     try {
       final dio = _ref.read(dioProvider);
+      final params = <String, dynamic>{'page': page, 'per_page': 20};
 
-      // ── Ricerca ──────────────────────────────────────────────
       if (q != null && q.isNotEmpty) {
-        final params = <String, dynamic>{'q': q, 'page': page, 'per_page': 10};
-        if (category != null) params['category'] = category;
-        final response = await dio.get('/articles', queryParameters: params);
-        final newItems = _parseItems(response);
-        final meta    = response.data['meta'] as Map<String, dynamic>;
-        state = state.copyWith(
-          articles:    appending ? [...state.articles, ...newItems] : newItems,
-          currentPage: meta['current_page'] as int,
-          lastPage:    meta['last_page'] as int,
-          loading:     false,
-          loadingMore: false,
-        );
-        return;
+        // Ricerca
+        params['q'] = q;
+        if (category != null && category != '__all__') params['category'] = category;
+      } else if (category == '__all__') {
+        // Tab "Tutte": tutti gli articoli
+        params['tab'] = 'tutte';
+      } else if (category != null) {
+        // Singola categoria
+        params['category'] = category;
       }
+      // else: null → Tab "Temi", backend filtra 4+ testate
 
-      // ── Tutte le categorie ───────────────────────────────────
-      if (category == null) {
-        final responses = await Future.wait(
-          _allCategories.map((cat) => dio.get('/articles', queryParameters: {
-            'category': cat, 'page': 1, 'per_page': _perCategory,
-          })),
-        );
-        final items = responses
-            .expand((r) => _parseItems(r))
-            .toList()
-          ..sort((a, b) => (b.publishedAt ?? DateTime(0)).compareTo(a.publishedAt ?? DateTime(0)));
+      final response = await dio.get('/articles', queryParameters: params);
+      final newItems = _parseItems(response);
+      final meta = response.data['meta'] as Map<String, dynamic>;
 
-        state = state.copyWith(
-          articles:    items,
-          currentPage: 1,
-          lastPage:    1,
-          loading:     false,
-          loadingMore: false,
-        );
-
-      // ── Singola categoria ────────────────────────────────────
-      } else {
-        final response = await dio.get('/articles', queryParameters: {
-          'page': page, 'per_page': 10, 'category': category,
-        });
-        final newItems = _parseItems(response);
-        final meta    = response.data['meta'] as Map<String, dynamic>;
-
-        state = state.copyWith(
-          articles:    appending ? [...state.articles, ...newItems] : newItems,
-          currentPage: meta['current_page'] as int,
-          lastPage:    meta['last_page'] as int,
-          loading:     false,
-          loadingMore: false,
-        );
-      }
+      state = state.copyWith(
+        articles:    appending ? [...state.articles, ...newItems] : newItems,
+        currentPage: meta['current_page'] as int,
+        lastPage:    meta['last_page'] as int,
+        loading:     false,
+        loadingMore: false,
+      );
     } catch (e) {
       state = state.copyWith(loading: false, loadingMore: false, error: e.toString());
     }

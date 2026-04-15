@@ -161,7 +161,7 @@ const { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, tog
 const { user, isAuthenticated, logout } = useAuth();
 const userName = computed(() => user.value?.name ?? '');
 
-const activeCategory = ref(null);
+const activeCategory = ref(null); // null=Temi, '__all__'=Tutte, string=categoria
 const sentinel = ref(null);
 let observer = null;
 
@@ -181,7 +181,7 @@ function closeSearch() {
   searchActive.value = false;
   searchQuery.value  = '';
   clearTimeout(searchTimer);
-  load(1);
+  load(1); // ricarica con il tab/categoria attivi
 }
 
 function clearSearch() {
@@ -212,6 +212,7 @@ const feedItems = computed(() => {
 
 const categories = [
   { value: null,          label: 'Temi' },
+  { value: '__all__',     label: 'Tutte' },
   { value: 'politica',    label: 'Politica' },
   { value: 'economia',    label: 'Economia' },
   { value: 'esteri',      label: 'Esteri' },
@@ -228,7 +229,10 @@ const categories = [
 ];
 
 async function load(page = 1) {
-  await fetchArticles({ category: activeCategory.value, page, q: searchQuery.value });
+  const isAll = activeCategory.value === '__all__';
+  const category = (isAll || activeCategory.value === null) ? null : activeCategory.value;
+  const tab = isAll ? 'tutte' : null;
+  await fetchArticles({ category, tab, page, q: searchQuery.value });
   if (page === 1) await nextTick().then(setupObserver);
 }
 
