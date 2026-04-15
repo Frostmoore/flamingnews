@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\Article;
 use App\Services\ClusteringService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -14,33 +13,10 @@ class ClusterArticlesJob implements ShouldQueue
 
     public function handle(ClusteringService $clustering): void
     {
-        if (!$clustering->isAvailable()) {
-            Log::channel('clustering')->warning('ClusterArticlesJob: microservizio non disponibile, skip.');
-            return;
-        }
+        // Ri-aggrega sempre con il metodo PHP-nativo (finestra 72h per intercettare
+        // articoli non coperti dal FetchNewsJob più recente)
+        $clustering->reclusterRecent(hours: 72);
 
-        // Articoli senza topic degli ultimi 2 giorni
-        $articles = Article::whereNull('topic_id')
-            ->where('created_at', '>=', now()->subDays(2))
-            ->get(['id', 'title', 'description', 'content'])
-            ->toArray();
-
-        if (empty($articles)) {
-            Log::info('ClusterArticlesJob: nessun articolo da clusterizzare.');
-            return;
-        }
-
-        Log::info('ClusterArticlesJob: invio ' . count($articles) . ' articoli al microservizio.');
-
-        $clusters = $clustering->clusterArticles($articles);
-
-        if (empty($clusters)) {
-            Log::channel('clustering')->warning('ClusterArticlesJob: nessun cluster restituito.');
-            return;
-        }
-
-        $clustering->applyClusterResults($clusters);
-
-        Log::info('ClusterArticlesJob: ' . count($clusters) . ' cluster applicati.');
+        Log::info('ClusterArticlesJob completato.');
     }
 }

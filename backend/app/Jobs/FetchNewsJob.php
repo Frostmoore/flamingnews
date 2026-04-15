@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Article;
 use App\Models\Source;
 use App\Models\Topic;
+use App\Services\ClusteringService;
 use App\Services\WorldNewsService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -14,19 +15,24 @@ class FetchNewsJob implements ShouldQueue
 {
     use Queueable;
 
-    public function handle(WorldNewsService $wn): void
+    public function handle(WorldNewsService $wn, ClusteringService $clustering): void
     {
         $total = 0;
 
         // ── 1. TOP NEWS: cluster già pronti dall'API ──────────────────────────
         $total += $this->processTopNews($wn);
 
-        // ── 2. THIN CATEGORIES: fetch separato, clustering Python dopo ────────
+        // ── 2. THIN CATEGORIES: fetch separato ────────────────────────────────
         foreach (WorldNewsService::THIN_CATEGORIES as $category) {
             $total += $this->processThinCategory($wn, $category);
         }
 
-        Log::info("FetchNewsJob completato: {$total} articoli salvati.");
+        Log::info("FetchNewsJob: {$total} articoli salvati. Avvio re-aggregazione…");
+
+        // ── 3. RE-AGGREGAZIONE: raggruppa duplicati cross-cluster e thin ──────
+        $clustering->reclusterRecent(hours: 48);
+
+        Log::info("FetchNewsJob completato.");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
