@@ -31,7 +31,7 @@
 
         <!-- Totali -->
         <section>
-          <h2 class="section-title">Panoramica</h2>
+          <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 border-b border-gray-200 pb-2">Panoramica</h2>
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
             <StatCard label="Articoli" :value="fmt(data.totals.articles)" />
             <StatCard label="Topic"    :value="fmt(data.totals.topics)" />
@@ -44,7 +44,7 @@
 
         <!-- Articoli -->
         <section>
-          <h2 class="section-title">Articoli</h2>
+          <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 border-b border-gray-200 pb-2">Articoli</h2>
           <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mt-4">
             <TopList
               title="Più cliccati"
@@ -79,7 +79,7 @@
 
         <!-- Testate -->
         <section>
-          <h2 class="section-title">Testate</h2>
+          <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 border-b border-gray-200 pb-2">Testate</h2>
           <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mt-4">
             <TopList
               title="Più produttive"
@@ -118,7 +118,7 @@
 
         <!-- Orientamento politico -->
         <section>
-          <h2 class="section-title">Orientamento politico</h2>
+          <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 border-b border-gray-200 pb-2">Orientamento politico</h2>
           <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mt-4">
             <LeanChart title="Articoli pubblicati"  :data="data.political_lean.by_articles" value-key="articles_count" />
             <LeanChart title="Click ricevuti"       :data="data.political_lean.by_clicks"   value-key="clicks_count" />
@@ -129,7 +129,7 @@
 
         <!-- Categorie -->
         <section>
-          <h2 class="section-title">Categorie</h2>
+          <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 border-b border-gray-200 pb-2">Categorie</h2>
           <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mt-4">
             <TopList
               title="Per volume"
@@ -318,8 +318,3 @@ async function load() {
 onMounted(load);
 </script>
 
-<style scoped>
-.section-title {
-  @apply text-xs font-bold uppercase tracking-widest text-gray-400 border-b border-gray-200 pb-2;
-}
-</style>
