@@ -42,4 +42,6 @@ Route::get('/topics/{id}',  [TopicController::class, 'show']);
 Route::post('/topics/{id}/analyze', [TopicController::class, 'analyze'])->middleware('auth:sanctum');
 
 // Analytics (pubblico)
-Route::get('/analytics', [AnalyticsController::class, 'index']);
+Route::get('/analytics',        [AnalyticsController::class, 'index']);
+Route::get('/analytics/source', [AnalyticsController::class, 'source']);
+Route::get('/articles/{id}/coverage', [ArticleController::class, 'coverage']);

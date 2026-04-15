@@ -14,7 +14,8 @@
             Flaming<span class="text-[#C41E3A]">News</span>
           </a>
           <div class="flex items-center gap-3">
-<button @click="openSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors" title="Cerca">
+            <a href="/analytics" class="text-xs font-semibold text-gray-400 hover:text-[#C41E3A] transition-colors uppercase tracking-wide hidden sm:inline" title="Analytics">Stats</a>
+            <button @click="openSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors" title="Cerca">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
               </svg>

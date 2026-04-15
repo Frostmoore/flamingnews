@@ -10,6 +10,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // ── Scheduler FlamingNews ──────────────────────────────────────────────────
-// RSS è gratuito → fetch ogni 5 minuti
-// FetchNewsJob include già reclusterRecent(48h)
-Schedule::job(new FetchNewsJob)->everyFiveMinutes();
+// RSS è gratuito → fetch ogni 5 minuti (sincrono, non richiede queue worker)
+Schedule::command('news:fetch')->everyFiveMinutes()->withoutOverlapping();

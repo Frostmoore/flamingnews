@@ -103,7 +103,8 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" -A \"Feedburner/1.0\" \"https://www.ilpost.it/feed/\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" --connect-timeout 5 \"https://feed.lastampa.it/notizie_principali.rss\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" -A \"Mozilla/5.0\" \"https://www.lastampa.it/rss/\")",
-      "Bash(php -r ' *)"
+      "Bash(php -r ' *)",
+      "Bash(python3 -c \"import sys,json; lines=[l for l in sys.stdin if 'analytics' in l.lower\\(\\) or 'SQLSTATE' in l or 'ErrorException' in l or 'table' in l.lower\\(\\)]; print\\(''.join\\(lines[-30:]\\)\\)\")"
     ],
     "additionalDirectories": [
       "E:\\coding\\XAMPP\\htdocs\\flamingnews",

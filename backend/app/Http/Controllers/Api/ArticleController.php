@@ -152,6 +152,25 @@ class ArticleController extends Controller
         return response()->json(['liked' => $liked, 'likes_count' => $count]);
     }
 
+    public function coverage(int $id): JsonResponse
+    {
+        $article = Article::findOrFail($id);
+
+        if (!$article->topic_id) {
+            return response()->json(['articles' => [
+                $article->only('id', 'title', 'source_name', 'source_domain', 'url', 'published_at', 'is_main'),
+            ]]);
+        }
+
+        $articles = Article::where('topic_id', $article->topic_id)
+            ->select('id', 'title', 'source_name', 'source_domain', 'url', 'published_at', 'is_main')
+            ->orderByDesc('is_main')
+            ->orderByDesc('published_at')
+            ->get();
+
+        return response()->json(['articles' => $articles]);
+    }
+
     public function click(Request $request, int $id): JsonResponse
     {
         Article::findOrFail($id); // 404 se non esiste
