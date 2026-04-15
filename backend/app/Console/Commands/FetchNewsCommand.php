@@ -16,12 +16,10 @@ class FetchNewsCommand extends Command
     {
         $before = Article::count();
         $this->info("Articoli prima del fetch: {$before}");
-        $this->info('Provider: ' . config('services.news_provider', 'gnews'));
         $this->newLine();
 
         $this->info('Avvio FetchNewsJob...');
         (new FetchNewsJob())->handle(
-            app(\App\Services\GNewsService::class),
             app(\App\Services\WorldNewsService::class),
         );
 
