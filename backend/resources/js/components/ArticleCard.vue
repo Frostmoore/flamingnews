@@ -1,6 +1,6 @@
 <template>
   <article
-    class="group cursor-pointer bg-white border border-gray-200 hover:border-[#C41E3A] transition-colors duration-200"
+    class="group cursor-pointer bg-white border border-gray-200 hover:border-[#C41E3A] transition-colors duration-200 flex flex-col"
     @click="$emit('click', article)"
   >
     <!-- Immagine -->
@@ -13,7 +13,7 @@
       />
     </div>
 
-    <div class="p-4">
+    <div class="p-4 flex-1 flex flex-col">
       <!-- Badge fonte + orientamento + data -->
       <div class="flex items-center gap-2 mb-2">
         <span
@@ -63,7 +63,7 @@
       </div>
 
       <!-- ── Copertura mediale ── -->
-      <div class="border-t border-gray-100 pt-3 mt-2" @click.stop>
+      <div class="border-t border-gray-100 pt-3 mt-auto" @click.stop>
 
         <!-- Più fonti: mostra ogni giornale con il suo titolo, raggruppato per orientamento -->
         <template v-if="hasCoverage">
@@ -122,11 +122,12 @@
     </div>
 
     <!-- ── Barra orientamenti ── -->
-    <div class="flex h-[5px] w-full overflow-hidden">
+    <div class="flex h-3 w-full overflow-hidden">
       <template v-for="lean in leanBarOrder" :key="lean">
         <div
           v-if="leanBarCounts[lean]"
           :style="{ flex: leanBarCounts[lean], backgroundColor: leanSolidHex[lean] }"
+          :title="leanLabelFull(lean) + ': ' + leanBarCounts[lean]"
         ></div>
       </template>
     </div>
