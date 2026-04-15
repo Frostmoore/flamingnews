@@ -11,12 +11,20 @@ const PER_CATEGORY = 6; // articoli per categoria in modalità "Tutte"
 
 export function useArticles() {
     const articles = ref([]);
-    const meta = ref({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
+    const meta = ref({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
     const loading = ref(false);
+    const loadingMore = ref(false);
     const error = ref(null);
 
-    async function fetchArticles({ category = null, page = 1, perPage = 20, q = '' } = {}) {
-        loading.value = true;
+    const hasMore = () => meta.value.current_page < meta.value.last_page;
+
+    async function fetchArticles({ category = null, page = 1, perPage = 10, q = '' } = {}) {
+        const appending = page > 1;
+        if (appending) {
+            loadingMore.value = true;
+        } else {
+            loading.value = true;
+        }
         error.value = null;
 
         try {
@@ -25,7 +33,7 @@ export function useArticles() {
                 const params = { q, page, per_page: perPage };
                 if (category) params.category = category;
                 const res = await axios.get('/api/articles', { params });
-                articles.value = res.data.data;
+                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
                 meta.value = res.data.meta;
                 return;
             }
@@ -52,17 +60,18 @@ export function useArticles() {
                     total: all.length,
                 };
             } else {
-                // Singola categoria: comportamento normale con paginazione
+                // Singola categoria: lazy load con paginazione
                 const res = await axios.get('/api/articles', {
                     params: { category, page, per_page: perPage },
                 });
-                articles.value = res.data.data;
+                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
                 meta.value = res.data.meta;
             }
         } catch (e) {
             error.value = e.response?.data?.message || 'Errore nel caricamento degli articoli.';
         } finally {
             loading.value = false;
+            loadingMore.value = false;
         }
     }
 
@@ -90,5 +99,5 @@ export function useArticles() {
         }
     }
 
-    return { articles, meta, loading, error, fetchArticles, fetchArticle, toggleLike };
+    return { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, fetchArticle, toggleLike };
 }

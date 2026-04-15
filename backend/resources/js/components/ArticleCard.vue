@@ -120,6 +120,16 @@
 
       </div>
     </div>
+
+    <!-- ── Barra orientamenti ── -->
+    <div class="flex h-[5px] w-full overflow-hidden">
+      <template v-for="lean in leanBarOrder" :key="lean">
+        <div
+          v-if="leanBarCounts[lean]"
+          :style="{ flex: leanBarCounts[lean], backgroundColor: leanSolidHex[lean] }"
+        ></div>
+      </template>
+    </div>
   </article>
 </template>
 
@@ -172,6 +182,27 @@ const byLean = computed(() => {
   });
   return groups;
 });
+
+// ── Barra coverage (include articolo principale + coverage) ───────────────
+const leanBarCounts = computed(() => {
+  const counts = { left: 0, center: 0, right: 0, international: 0, altro: 0 };
+  const mainLean = props.article.political_lean ?? 'altro';
+  counts[mainLean] = 1;
+  (props.article.coverage ?? []).forEach(src => {
+    const l = src.lean ?? 'altro';
+    if (l in counts) counts[l]++;
+    else counts.altro++;
+  });
+  return counts;
+});
+const leanBarOrder = ['left', 'center', 'right', 'international', 'altro'];
+const leanSolidHex = {
+  left:          '#2563EB',
+  center:        '#6B7280',
+  right:         '#DC2626',
+  international: '#D97706',
+  altro:         '#7C3AED',
+};
 
 // ── Etichette orientamento ────────────────────────────
 const leanLabelMap = {

@@ -98,9 +98,9 @@
       <!-- Griglia articoli — layout editoriale asimmetrico -->
       <template v-else>
         <!-- Primo articolo in evidenza -->
-        <div v-if="articles.length > 0" class="mb-6">
+        <div v-if="visibleArticles.length > 0" class="mb-6">
           <ArticleCard
-            :article="articles[0]"
+            :article="visibleArticles[0]"
             class="md:flex md:gap-6"
             @click="openArticle"
             @like="toggleLike"
@@ -128,21 +128,15 @@
           </template>
         </div>
 
-        <!-- Paginazione -->
-        <div v-if="meta.last_page > 1" class="mt-8 flex justify-center gap-2">
-          <button
-            v-if="meta.current_page > 1"
-            @click="changePage(meta.current_page - 1)"
-            class="px-4 py-2 border border-gray-300 text-sm hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors"
-          >← Precedente</button>
-          <span class="px-4 py-2 text-sm text-gray-500">
-            {{ meta.current_page }} / {{ meta.last_page }}
-          </span>
-          <button
-            v-if="meta.current_page < meta.last_page"
-            @click="changePage(meta.current_page + 1)"
-            class="px-4 py-2 border border-gray-300 text-sm hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors"
-          >Successiva →</button>
+        <!-- Sentinel lazy load -->
+        <div ref="sentinel" class="h-10"></div>
+
+        <!-- Spinner caricamento ulteriori articoli -->
+        <div v-if="loadingMore" class="flex justify-center py-6">
+          <svg class="animate-spin w-6 h-6 text-[#C41E3A]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
         </div>
       </template>
     </div>
@@ -150,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useArticles } from '../composables/useArticles';
 import { useAuth } from '../composables/useAuth';
 import ArticleCard from './ArticleCard.vue';
@@ -162,11 +156,14 @@ const props = defineProps({
   adsenseFrequency:  { type: String, default: '6' },
 });
 
-const { articles, meta, loading, error, fetchArticles, toggleLike } = useArticles();
+const { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, toggleLike } = useArticles();
 const { user, isAuthenticated, logout } = useAuth();
 const userName = computed(() => user.value?.name ?? '');
 
 const activeCategory = ref(null);
+const sentinel = ref(null);
+const displayLimit = ref(10);
+let observer = null;
 
 // ── Ricerca ───────────────────────────────────────────────────────────────
 const searchActive = ref(false);
@@ -199,10 +196,13 @@ function onSearchInput() {
   searchTimer = setTimeout(() => load(1), 350);
 }
 
+// Articoli visibili in base al displayLimit
+const visibleArticles = computed(() => articles.value.slice(0, displayLimit.value));
+
 // Intercala un placeholder annuncio ogni N articoli (escluso il primo in evidenza)
 const feedItems = computed(() => {
   const freq = parseInt(props.adsenseFrequency) || 6;
-  const rest = articles.value.slice(1);
+  const rest = visibleArticles.value.slice(1);
   const items = [];
   rest.forEach((article, i) => {
     if (i > 0 && i % freq === 0) {
@@ -231,17 +231,37 @@ const categories = [
 ];
 
 async function load(page = 1) {
+  if (page === 1) displayLimit.value = 10;
   await fetchArticles({ category: activeCategory.value, page, q: searchQuery.value });
+  if (page === 1) await nextTick().then(setupObserver);
+}
+
+async function loadMore() {
+  if (loadingMore.value || loading.value) return;
+  // Mostra altri articoli già in memoria (es. "Tutte" o pagine già caricate)
+  if (displayLimit.value < articles.value.length) {
+    displayLimit.value += 10;
+    return;
+  }
+  // Altrimenti chiedi la pagina successiva al server
+  if (hasMore()) {
+    await load(meta.value.current_page + 1);
+    displayLimit.value = articles.value.length;
+  }
+}
+
+function setupObserver() {
+  if (observer) observer.disconnect();
+  observer = new IntersectionObserver(
+    (entries) => { if (entries[0].isIntersecting) loadMore(); },
+    { rootMargin: '400px' }
+  );
+  if (sentinel.value) observer.observe(sentinel.value);
 }
 
 function selectCategory(value) {
   activeCategory.value = value;
   load(1);
-}
-
-function changePage(page) {
-  load(page);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function openArticle(article) {
@@ -256,5 +276,11 @@ function toggleAuth() {
   }
 }
 
-onMounted(() => load());
+onMounted(async () => {
+  await load();
+  await nextTick();
+  setupObserver();
+});
+
+onBeforeUnmount(() => { if (observer) observer.disconnect(); });
 </script>
