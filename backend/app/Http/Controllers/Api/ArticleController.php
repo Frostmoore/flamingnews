@@ -17,7 +17,7 @@ class ArticleController extends Controller
 
         $query = Article::with([
             'source:domain,political_lean,name',
-            'topic.articles:id,source_name,source_domain,url,topic_id',
+            'topic.articles:id,title,source_name,source_domain,url,topic_id',
             'topic.articles.source:domain,political_lean',
         ])->withCount('likes')->latest('published_at');
 
@@ -61,7 +61,7 @@ class ArticleController extends Controller
     {
         $article = Article::with([
             'source:domain,political_lean,name',
-            'topic.articles:id,source_name,source_domain,url,topic_id',
+            'topic.articles:id,title,source_name,source_domain,url,topic_id',
             'topic.articles.source:domain,political_lean',
         ])->findOrFail($id);
 

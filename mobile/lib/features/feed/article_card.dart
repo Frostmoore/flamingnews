@@ -46,18 +46,9 @@ class ArticleCard extends StatelessWidget {
     this.onLike,
   });
 
-  /// Raggruppa tutte le fonti (principale + coverage) per orientamento.
+  /// Raggruppa la coverage per orientamento (solo le altre testate).
   Map<String, List<Map<String, dynamic>>> get _byLean {
     final groups = {for (final l in _leanOrder) l: <Map<String, dynamic>>[]};
-    // Fonte principale
-    final selfLean = article.politicalLean ?? 'altro';
-    (groups[selfLean] ??= []).add({
-      'id': -1,
-      'title': article.title,
-      'source_name': article.sourceName,
-      'url': article.url,
-    });
-    // Articoli di copertura
     for (final src in article.coverage) {
       final l = src.lean ?? 'altro';
       (groups[l] ??= []).add({
@@ -298,12 +289,11 @@ class _SourceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSelf = src['id'] == -1;
     final url = src['url'] as String? ?? '';
     final title = src['title'] as String? ?? '';
     final sourceName = src['source_name'] as String? ?? '';
 
-    Widget content = Padding(
+    final content = Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Container(
         padding: const EdgeInsets.only(left: 8),
@@ -320,24 +310,16 @@ class _SourceRow extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelf ? const Color(0xFF6B7280) : const Color(0xFF1A1A1A),
-                height: 1.3,
-                fontStyle: isSelf ? FontStyle.italic : FontStyle.normal,
-              ),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF1A1A1A), height: 1.3),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            if (isSelf)
-              const Text('(questo articolo)', style: TextStyle(fontSize: 9, color: Colors.black26)),
           ],
         ),
       ),
     );
 
-    if (isSelf || url.isEmpty) return content;
-
+    if (url.isEmpty) return content;
     return GestureDetector(
       onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
       child: content,

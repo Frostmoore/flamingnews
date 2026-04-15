@@ -87,15 +87,7 @@
               <!-- Lista: una riga per ogni giornale con il suo titolo -->
               <ul class="space-y-2">
                 <li v-for="src in byLean[lean]" :key="src.id">
-                  <!-- L'articolo corrente (nessun link esterno) -->
-                  <div v-if="src.id === -1" class="pl-3" :style="{ borderLeft: '2px solid ' + leanBorderHex(lean) }">
-                    <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wide mb-0.5">{{ src.source_name }}</span>
-                    <span class="text-xs text-gray-700 leading-snug line-clamp-2 block italic">{{ src.title }}</span>
-                    <span class="text-xs text-gray-300">(questo articolo)</span>
-                  </div>
-                  <!-- Articolo di copertura (link esterno) -->
                   <a
-                    v-else
                     :href="src.url"
                     target="_blank"
                     rel="noopener"
@@ -171,23 +163,10 @@ const formattedDate = computed(() => {
 // ── Coverage ──────────────────────────────────────────
 const hasCoverage = computed(() => props.article.coverage?.length > 0);
 
-// Tutte le fonti: fonte principale (id=-1) + coverage
-const allSources = computed(() => {
-  const self = {
-    id: -1,
-    title: props.article.title,
-    source_name: props.article.source_name,
-    source_domain: props.article.source_domain,
-    url: props.article.url,
-    lean: props.article.political_lean,
-  };
-  return [self, ...(props.article.coverage ?? [])];
-});
-
-// Raggruppa per orientamento
+// Raggruppa la coverage per orientamento (solo le altre testate, non l'articolo corrente)
 const byLean = computed(() => {
   const groups = { left: [], center: [], right: [], international: [], altro: [] };
-  allSources.value.forEach(src => {
+  (props.article.coverage ?? []).forEach(src => {
     const l = src.lean ?? 'altro';
     (groups[l] ?? groups.altro).push(src);
   });
