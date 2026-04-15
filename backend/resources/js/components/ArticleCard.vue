@@ -104,12 +104,12 @@
                       class="pl-3"
                       :style="{ borderLeft: '2px solid ' + leanBorderHex(lean) }"
                     >
-                      <!-- Titolo cliccabile → apre il sito -->
+                      <!-- Titolo cliccabile → apre il sito + traccia click -->
                       <a
                         :href="src.url"
                         target="_blank"
                         rel="noopener"
-                        @click.stop
+                        @click.stop="trackCoverageClick(src.id)"
                         class="group block hover:bg-gray-50 rounded-r transition-colors"
                       >
                         <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wide mb-0.5">{{ src.source_name }}</span>
@@ -165,14 +165,19 @@
       <!-- Spacer -->
       <div class="flex-1"></div>
 
-      <!-- ── Barra orientamenti ── -->
-      <div class="flex h-3 w-full overflow-hidden">
+      <!-- ── Barra orientamenti con etichette e percentuali ── -->
+      <div class="flex h-7 w-full overflow-hidden">
         <template v-for="lean in leanBarOrder" :key="lean">
           <div
             v-if="leanBarCounts[lean]"
+            class="flex items-center justify-center overflow-hidden px-1 min-w-0"
             :style="{ flex: leanBarCounts[lean], backgroundColor: leanSolidHex[lean] }"
-            :title="leanLabelFull(lean) + ': ' + leanBarCounts[lean]"
-          ></div>
+          >
+            <span
+              class="text-white font-bold whitespace-nowrap overflow-hidden text-ellipsis select-none"
+              style="font-size:9px; text-shadow:0 1px 2px rgba(0,0,0,0.35);"
+            >{{ leanBarShortLabel[lean] }} {{ leanBarPercent(lean) }}%</span>
+          </div>
         </template>
       </div>
     </div>
@@ -275,6 +280,20 @@ const leanBarCounts = computed(() => {
 });
 const leanBarOrder = ['left', 'center-left', 'center', 'center-right', 'right', 'international', 'altro'];
 const leanSolidHex = leanHex;
+const leanBarTotal = computed(() => Object.values(leanBarCounts.value).reduce((s, n) => s + n, 0));
+function leanBarPercent(lean) {
+  const t = leanBarTotal.value;
+  return t ? Math.round((leanBarCounts.value[lean] ?? 0) / t * 100) : 0;
+}
+const leanBarShortLabel = {
+  left:          'Sx',
+  'center-left': 'C.Sx',
+  center:        'Cen.',
+  'center-right':'C.Dx',
+  right:         'Dx',
+  international: "Int'l",
+  altro:         'Neu.',
+};
 
 // ── Etichette orientamento ────────────────────────────
 const leanLabelMap = {
@@ -310,6 +329,11 @@ async function shareMain() {
   }
   // Traccia sul backend e aggiorna contatore via emit al parent
   emit('share', props.article);
+}
+
+// ── Click tracking ────────────────────────────────────
+function trackCoverageClick(id) {
+  axios.post(`/api/articles/${id}/click`).catch(() => {});
 }
 
 // ── Azioni coverage (gestite localmente) ─────────────

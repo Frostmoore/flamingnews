@@ -95,6 +95,13 @@ class ArticlesNotifier extends StateNotifier<ArticlesState> {
           .map((e) => Article.fromJson(e as Map<String, dynamic>))
           .toList();
 
+  Future<void> trackClick(int articleId) async {
+    try {
+      final dio = _ref.read(dioProvider);
+      await dio.post('/articles/$articleId/click');
+    } catch (_) {}
+  }
+
   Future<void> toggleLike(int articleId) async {
     try {
       final dio = _ref.read(dioProvider);

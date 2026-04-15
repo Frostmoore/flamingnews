@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Article;
+use App\Models\ArticleClick;
 use App\Models\ArticleLike;
 use App\Models\ArticleShare;
 use App\Models\UserRead;
@@ -149,6 +150,18 @@ class ArticleController extends Controller
         $count = ArticleLike::where('article_id', $id)->count();
 
         return response()->json(['liked' => $liked, 'likes_count' => $count]);
+    }
+
+    public function click(Request $request, int $id): JsonResponse
+    {
+        Article::findOrFail($id); // 404 se non esiste
+
+        ArticleClick::create([
+            'user_id'    => optional(auth('sanctum')->user())->id, // null se anonimo
+            'article_id' => $id,
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     public function share(Request $request, int $id): JsonResponse

@@ -40,6 +40,16 @@ const _leanLabels = {
   'altro':         'Media neutri',
 };
 
+const _leanBarLabels = {
+  'left':          'Sx',
+  'center-left':   'C.Sx',
+  'center':        'Cen.',
+  'center-right':  'C.Dx',
+  'right':         'Dx',
+  'international': "Int'l",
+  'altro':         'Neu.',
+};
+
 // ── ArticleCard (StatefulWidget per stato locale coverage) ─────────────────
 class ArticleCard extends StatefulWidget {
   final Article article;
@@ -122,7 +132,10 @@ class _ArticleCardState extends State<ArticleCard> {
     final hasCoverage = _uniqueCoverage.isNotEmpty;
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: () {
+        widget.notifier?.trackClick(article.id);
+        widget.onTap();
+      },
       child: Card(
         elevation: 0,
         color: Colors.white,
@@ -268,6 +281,7 @@ class _ArticleCardState extends State<ArticleCard> {
                       byLean: _byLean,
                       onLike: _toggleCoverageLike,
                       onShare: _shareCoverage,
+                      onTrackClick: (src) => widget.notifier?.trackClick(src.id),
                     )
                   else
                     _SingleSourceSection(
@@ -295,11 +309,13 @@ class _CoverageSection extends StatelessWidget {
   final Map<String, List<CoverageSource>> byLean;
   final void Function(CoverageSource) onLike;
   final void Function(CoverageSource) onShare;
+  final void Function(CoverageSource) onTrackClick;
 
   const _CoverageSection({
     required this.byLean,
     required this.onLike,
     required this.onShare,
+    required this.onTrackClick,
   });
 
   @override
@@ -319,6 +335,7 @@ class _CoverageSection extends StatelessWidget {
           sources: byLean[lean]!,
           onLike: onLike,
           onShare: onShare,
+          onTrackClick: onTrackClick,
         )),
       ],
     );
@@ -331,12 +348,14 @@ class _LeanGroup extends StatelessWidget {
   final List<CoverageSource> sources;
   final void Function(CoverageSource) onLike;
   final void Function(CoverageSource) onShare;
+  final void Function(CoverageSource) onTrackClick;
 
   const _LeanGroup({
     required this.lean,
     required this.sources,
     required this.onLike,
     required this.onShare,
+    required this.onTrackClick,
   });
 
   @override
@@ -374,6 +393,7 @@ class _LeanGroup extends StatelessWidget {
             borderColor: borderColor,
             onLike: () => onLike(src),
             onShare: () => onShare(src),
+            onTrackClick: () => onTrackClick(src),
           )),
         ],
       ),
@@ -387,12 +407,14 @@ class _SourceRow extends StatelessWidget {
   final Color borderColor;
   final VoidCallback onLike;
   final VoidCallback onShare;
+  final VoidCallback onTrackClick;
 
   const _SourceRow({
     required this.src,
     required this.borderColor,
     required this.onLike,
     required this.onShare,
+    required this.onTrackClick,
   });
 
   @override
@@ -481,7 +503,10 @@ class _SourceRow extends StatelessWidget {
 
     if (url.isEmpty) return content;
     return GestureDetector(
-      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      onTap: () {
+        onTrackClick();
+        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      },
       child: content,
     );
   }
@@ -538,15 +563,37 @@ class _CoverageBar extends StatelessWidget {
     final segments = _leanOrder.where((l) => (counts[l] ?? 0) > 0).toList();
     if (segments.isEmpty) return const SizedBox.shrink();
 
+    final total = counts.values.fold(0, (s, n) => s + n);
+
     return SizedBox(
-      height: 12,
+      height: 28,
       child: Row(
-        children: segments
-            .map((l) => Flexible(
-                  flex: counts[l]!,
-                  child: Container(color: _leanColors[l]!),
-                ))
-            .toList(),
+        children: segments.map((l) {
+          final pct = total > 0 ? (counts[l]! / total * 100).round() : 0;
+          final label = _leanBarLabels[l] ?? l;
+          return Flexible(
+            flex: counts[l]!,
+            child: Container(
+              color: _leanColors[l]!,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '$label $pct%',
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                    shadows: [Shadow(color: Colors.black38, blurRadius: 2)],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

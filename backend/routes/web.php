@@ -8,7 +8,6 @@ Route::get('/auth/categories',  fn () => view('auth.categories'));
 
 // Pagine pubbliche (richiedono JS auth guard)
 Route::get('/',               fn () => view('pages.home'));
-Route::get('/prime-pagine',   fn () => view('pages.prime-pagine'));
 Route::get('/coverage',       fn () => view('pages.coverage'));
 Route::get('/articles/{id}',  fn () => view('pages.article'));
 

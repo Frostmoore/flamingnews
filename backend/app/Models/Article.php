@@ -54,6 +54,11 @@ class Article extends Model
         return $this->hasMany(ArticleShare::class);
     }
 
+    public function clicks()
+    {
+        return $this->hasMany(ArticleClick::class);
+    }
+
     /**
      * Returns first 3 sentences of content for AI analysis input.
      */

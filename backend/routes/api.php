@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\PrimePagineController;
 use App\Http\Controllers\Api\TopicController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,9 +31,7 @@ Route::get('/articles',      [ArticleController::class, 'index'])->middleware('a
 Route::get('/articles/{id}', [ArticleController::class, 'show'])->middleware('auth:sanctum')->withoutMiddleware('auth:sanctum');
 Route::post('/articles/{id}/like',  [ArticleController::class, 'like'])->middleware('auth:sanctum');
 Route::post('/articles/{id}/share', [ArticleController::class, 'share']);
-
-// Prime pagine (pubblico)
-Route::get('/prima-pagine', [PrimePagineController::class, 'index']);
+Route::post('/articles/{id}/click', [ArticleController::class, 'click']);
 
 // Topics (pubblico)
 Route::get('/topics',       [TopicController::class, 'index']);
