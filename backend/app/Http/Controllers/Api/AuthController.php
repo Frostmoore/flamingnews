@@ -28,7 +28,7 @@ class AuthController extends Controller
 
     private function registrationsClosed(): bool
     {
-        return filter_var(env('ACTIVE', false), FILTER_VALIDATE_BOOLEAN);
+        return (bool) config('flamingnews.registrations_closed');
     }
 
     // -------------------------------------------------------------------------
