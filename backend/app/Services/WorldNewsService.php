@@ -184,6 +184,35 @@ class WorldNewsService
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // FRONT PAGES
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Chiama /retrieve-front-page per un singolo giornale.
+     * Restituisce ['name', 'date', 'language', 'country', 'image'] oppure null.
+     */
+    public function fetchFrontPage(?string $sourceName = null, ?string $date = null): ?array
+    {
+        $params = ['api-key' => $this->apiKey, 'source-country' => 'it'];
+        if ($sourceName) $params['source-name'] = $sourceName;
+        if ($date)       $params['date']        = $date;
+
+        $response = Http::timeout(15)->get("{$this->baseUrl}/retrieve-front-page", $params);
+
+        $this->logQuota($response, 'retrieve-front-page');
+
+        if ($response->failed()) {
+            Log::warning("WorldNews /retrieve-front-page failed for [{$sourceName}]", [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            return null;
+        }
+
+        return $response->json('front_page');
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // QUOTA LOGGING
     // ─────────────────────────────────────────────────────────────────────────
 

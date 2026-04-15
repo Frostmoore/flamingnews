@@ -18,6 +18,7 @@ class Article extends Model
         'published_at',
         'category',
         'topic_id',
+        'is_main',
     ];
 
     protected function casts(): array

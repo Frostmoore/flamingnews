@@ -19,7 +19,9 @@ class ArticleController extends Controller
             'source:domain,political_lean,name',
             'topic.articles:id,title,source_name,source_domain,url,topic_id',
             'topic.articles.source:domain,political_lean',
-        ])->withCount('likes')->latest('published_at');
+        ])->withCount('likes')
+          ->where('is_main', true)   // mostra solo l'articolo rappresentativo per topic
+          ->latest('published_at');
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);

@@ -45,7 +45,7 @@ class ClusteringService
     {
         $articles = Article::where('published_at', '>=', now()->subHours($hours))
             ->orderBy('published_at', 'desc')
-            ->get(['id', 'title', 'topic_id'])
+            ->get(['id', 'title', 'topic_id', 'url_to_image', 'published_at'])
             ->toArray();
 
         if (count($articles) < 2) {
@@ -105,28 +105,32 @@ class ClusteringService
 
             $articleIds = array_column($group, 'id');
             $topicIds   = array_values(array_filter(array_unique(array_column($group, 'topic_id'))));
+            $mainId     = $this->pickMainId($group);
 
             if (empty($topicIds)) {
                 // Nessun topic: crea uno nuovo
-                $main  = $group[0];
+                $mainArticle = $group[array_search($mainId, array_column($group, 'id'))];
                 $topic = Topic::create([
-                    'title'         => $main['title'],
+                    'title'         => $mainArticle['title'],
                     'keywords'      => [],
                     'article_count' => count($articleIds),
                 ]);
-                Article::whereIn('id', $articleIds)->update(['topic_id' => $topic->id]);
+                Article::whereIn('id', $articleIds)->update(['topic_id' => $topic->id, 'is_main' => false]);
+                Article::where('id', $mainId)->update(['is_main' => true]);
                 $created++;
 
             } elseif (count($topicIds) === 1) {
-                // Tutti già nello stesso topic: aggiorna solo il conteggio
-                // e assegna gli articoli senza topic
+                // Stesso topic: assegna gli articoli senza topic e aggiusta is_main
                 $noTopic = array_column(
                     array_filter($group, fn ($a) => $a['topic_id'] === null),
                     'id'
                 );
                 if (!empty($noTopic)) {
-                    Article::whereIn('id', $noTopic)->update(['topic_id' => $topicIds[0]]);
+                    Article::whereIn('id', $noTopic)->update(['topic_id' => $topicIds[0], 'is_main' => false]);
                 }
+                // Assicura che un solo articolo sia main
+                Article::where('topic_id', $topicIds[0])->update(['is_main' => false]);
+                Article::where('id', $mainId)->update(['is_main' => true]);
                 Topic::where('id', $topicIds[0])
                     ->update(['article_count' => Article::where('topic_id', $topicIds[0])->count()]);
 
@@ -140,7 +144,8 @@ class ClusteringService
                 $primaryId = $counts->sortDesc()->keys()->first();
 
                 // Sposta tutti gli articoli del gruppo nel topic primario
-                Article::whereIn('id', $articleIds)->update(['topic_id' => $primaryId]);
+                Article::whereIn('id', $articleIds)->update(['topic_id' => $primaryId, 'is_main' => false]);
+                Article::where('id', $mainId)->update(['is_main' => true]);
 
                 // Aggiorna conteggio
                 Topic::where('id', $primaryId)
@@ -224,6 +229,21 @@ class ClusteringService
     // ─────────────────────────────────────────────────────────────────────────
     // UTILITY
     // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Dall'array di articoli del gruppo sceglie l'id del "main":
+     * priorità: ha immagine > published_at più recente
+     */
+    private function pickMainId(array $group): int
+    {
+        usort($group, function (array $a, array $b) {
+            $imgA = !empty($a['url_to_image']) ? 0 : 1;
+            $imgB = !empty($b['url_to_image']) ? 0 : 1;
+            if ($imgA !== $imgB) return $imgA <=> $imgB;
+            return strcmp($b['published_at'] ?? '', $a['published_at'] ?? '');
+        });
+        return $group[0]['id'];
+    }
 
     private function tokenize(string $title): array
     {

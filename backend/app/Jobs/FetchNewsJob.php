@@ -70,19 +70,19 @@ class FetchNewsJob implements ShouldQueue
                 // Recupera o crea il topic
                 $topic = $existing->topic ?? $this->createTopic($main, count($articles));
                 if (!$existing->topic_id) {
-                    $existing->update(['topic_id' => $topic->id]);
+                    $existing->update(['topic_id' => $topic->id, 'is_main' => true]);
                 }
             } else {
                 $topic = $this->createTopic($main, count($articles));
-                $this->saveArticle($main, $category, $topic->id, $wn);
+                $this->saveArticle($main, $category, $topic->id, $wn, isMain: true);
                 $saved++;
             }
 
-            // Salva gli articoli di coverage
+            // Salva gli articoli di coverage (non sono main)
             foreach ($coverage as $raw) {
                 $url = $raw['url'] ?? '';
                 if (empty($url) || Article::where('url', $url)->exists()) continue;
-                $this->saveArticle($raw, $category, $topic->id, $wn);
+                $this->saveArticle($raw, $category, $topic->id, $wn, isMain: false);
                 $saved++;
             }
         }
@@ -138,7 +138,8 @@ class FetchNewsJob implements ShouldQueue
         foreach ($articles as $raw) {
             $url = $raw['url'] ?? '';
             if (empty($url) || Article::where('url', $url)->exists()) continue;
-            $this->saveArticle($raw, $category, null, $wn);
+            // Thin: nessun topic ancora, is_main=true provvisorio (la re-aggregazione correggerà)
+            $this->saveArticle($raw, $category, null, $wn, isMain: true);
             $saved++;
         }
 
@@ -150,7 +151,7 @@ class FetchNewsJob implements ShouldQueue
     // PERSISTENZA
     // ─────────────────────────────────────────────────────────────────────────
 
-    private function saveArticle(array $raw, string $category, ?int $topicId, WorldNewsService $wn): void
+    private function saveArticle(array $raw, string $category, ?int $topicId, WorldNewsService $wn, bool $isMain = false): void
     {
         $url = $raw['url'] ?? '';
         if (empty($url)) return;
@@ -171,6 +172,7 @@ class FetchNewsJob implements ShouldQueue
             'published_at' => $wn->parsePublishedAt($raw['publish_date'] ?? null),
             'category'     => $category,
             'topic_id'     => $topicId,
+            'is_main'      => $isMain,
         ]);
     }
 }
