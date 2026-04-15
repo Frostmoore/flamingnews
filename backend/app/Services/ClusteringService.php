@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Article;
 use App\Models\Topic;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -43,9 +44,15 @@ class ClusteringService
      */
     public function reclusterRecent(int $hours = 48): void
     {
+        // Mappa domain → political_lean per le scelte diversificate del main
+        $leanByDomain = DB::table('sources')
+            ->whereNotNull('political_lean')
+            ->pluck('political_lean', 'domain')
+            ->toArray();
+
         $articles = Article::where('published_at', '>=', now()->subHours($hours))
             ->orderBy('published_at', 'desc')
-            ->get(['id', 'title', 'topic_id', 'url_to_image', 'published_at'])
+            ->get(['id', 'title', 'topic_id', 'url_to_image', 'published_at', 'source_domain'])
             ->toArray();
 
         if (count($articles) < 2) {
@@ -105,7 +112,7 @@ class ClusteringService
 
             $articleIds = array_column($group, 'id');
             $topicIds   = array_values(array_filter(array_unique(array_column($group, 'topic_id'))));
-            $mainId     = $this->pickMainId($group);
+            $mainId     = $this->pickMainId($group, $leanByDomain);
 
             if (empty($topicIds)) {
                 // Nessun topic: crea uno nuovo
@@ -231,18 +238,63 @@ class ClusteringService
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Dall'array di articoli del gruppo sceglie l'id del "main":
-     * priorità: ha immagine > published_at più recente
+     * Sceglie l'articolo "main" del gruppo massimizzando la varietà delle fonti.
+     *
+     * Logica:
+     *  1. Preferisce articoli con immagine.
+     *  2. Tra i candidati con immagine, sceglie quello appartenente al lean
+     *     politico meno rappresentato nel cluster (evita il dominio sistematico
+     *     delle agenzie neutrali che pubblicano per prime).
+     *  3. A parità di lean, sceglie in modo casuale ma deterministico
+     *     (seed = somma degli ID del gruppo) per evitare flipping ad ogni
+     *     re-cluster.
+     *
+     * @param array<int,array> $group        Articoli del cluster
+     * @param array<string,string> $leanByDomain  domain → political_lean
      */
-    private function pickMainId(array $group): int
+    private function pickMainId(array $group, array $leanByDomain = []): int
     {
-        usort($group, function (array $a, array $b) {
-            $imgA = !empty($a['url_to_image']) ? 0 : 1;
-            $imgB = !empty($b['url_to_image']) ? 0 : 1;
-            if ($imgA !== $imgB) return $imgA <=> $imgB;
-            return strcmp($b['published_at'] ?? '', $a['published_at'] ?? '');
-        });
-        return $group[0]['id'];
+        // ── 1. Priorità alle immagini ─────────────────────────────────────────
+        $withImage = array_values(array_filter($group, fn ($a) => !empty($a['url_to_image'])));
+        $candidates = !empty($withImage) ? $withImage : array_values($group);
+
+        if (count($candidates) === 1) {
+            return $candidates[0]['id'];
+        }
+
+        // ── 2. Conta articoli per lean nell'intero gruppo ─────────────────────
+        $leanCounts = [];
+        foreach ($group as $a) {
+            $lean = $leanByDomain[$a['source_domain'] ?? ''] ?? 'unknown';
+            $leanCounts[$lean] = ($leanCounts[$lean] ?? 0) + 1;
+        }
+
+        // ── 3. Raggruppa candidati per lean ───────────────────────────────────
+        $byLean = [];
+        foreach ($candidates as $a) {
+            $lean = $leanByDomain[$a['source_domain'] ?? ''] ?? 'unknown';
+            $byLean[$lean][] = $a;
+        }
+
+        // Ordina i lean per frequenza crescente: il lean più raro nel cluster
+        // ha la precedenza, così le voci di minoranza possono fare da main.
+        uksort($byLean, fn ($la, $lb) => ($leanCounts[$la] ?? 0) <=> ($leanCounts[$lb] ?? 0));
+
+        // ── 4. Scegli casualmente tra i candidati del lean più raro ──────────
+        // Seed deterministico basato sugli ID: stesso risultato ad ogni re-cluster,
+        // ma varia tra gruppi diversi.
+        $topCandidates = array_values(reset($byLean));
+
+        if (count($topCandidates) === 1) {
+            return $topCandidates[0]['id'];
+        }
+
+        $seed = array_sum(array_column($group, 'id')) % PHP_INT_MAX;
+        srand($seed);
+        shuffle($topCandidates);
+        srand(); // ripristina il generatore globale
+
+        return $topCandidates[0]['id'];
     }
 
     private function tokenize(string $title): array

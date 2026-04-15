@@ -20,11 +20,19 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
               </svg>
             </button>
-            <span v-if="isAuthenticated" class="text-xs text-gray-400 hidden sm:inline">{{ userName }}</span>
-            <button
-              @click="toggleAuth"
-              class="px-4 py-1.5 text-xs font-bold tracking-wide border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors uppercase"
-            >{{ isAuthenticated ? 'Esci' : 'Accedi' }}</button>
+            <template v-if="isAuthenticated">
+              <a href="/profile" class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-[#C41E3A] transition-colors" title="Il mio profilo">
+                <div class="w-6 h-6 rounded-full bg-[#C41E3A] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">{{ userName[0]?.toUpperCase() }}</div>
+                <span class="hidden sm:inline">{{ userName }}</span>
+              </a>
+              <button
+                @click="toggleAuth"
+                class="px-4 py-1.5 text-xs font-bold tracking-wide border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors uppercase"
+              >Esci</button>
+            </template>
+            <template v-else>
+              <a href="/login" class="px-4 py-1.5 text-xs font-bold tracking-wide border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors uppercase">Accedi</a>
+            </template>
           </div>
         </template>
 
@@ -143,11 +151,26 @@
         </div>
       </template>
     </div>
+
+    <!-- Torna all'inizio — appare dopo il primo lazy-load -->
+    <Transition name="scroll-top">
+      <button
+        v-if="showScrollTop"
+        @click="scrollToTop"
+        class="fixed bottom-6 right-6 z-50 w-12 h-12 bg-[#C41E3A] text-white shadow-lg flex items-center justify-center hover:bg-red-800 transition-colors"
+        title="Torna all'inizio"
+        aria-label="Torna all'inizio"
+      >
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
+        </svg>
+      </button>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import axios from 'axios';
 import { useArticles } from '../composables/useArticles';
 import { useAuth } from '../composables/useAuth';
@@ -164,8 +187,9 @@ const { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, tog
 const { user, isAuthenticated, logout } = useAuth();
 const userName = computed(() => user.value?.name ?? '');
 
-const activeCategory = ref(null); // null=Temi, '__all__'=Tutte, string=categoria
-const sentinel = ref(null);
+const activeCategory  = ref(null); // null=Temi, '__all__'=Tutte, string=categoria
+const sentinel        = ref(null);
+const showScrollTop   = computed(() => (meta.value?.current_page ?? 1) > 1);
 let observer = null;
 
 // ── Ricerca ───────────────────────────────────────────────────────────────
@@ -258,6 +282,10 @@ function selectCategory(value) {
   load(1);
 }
 
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function openArticle(article) {
   axios.post(`/api/articles/${article.id}/click`).catch(() => {});
   window.open(article.url, '_blank', 'noopener,noreferrer');
@@ -279,3 +307,15 @@ onMounted(async () => {
 
 onBeforeUnmount(() => { if (observer) observer.disconnect(); });
 </script>
+
+<style scoped>
+.scroll-top-enter-active,
+.scroll-top-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.scroll-top-enter-from,
+.scroll-top-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+</style>

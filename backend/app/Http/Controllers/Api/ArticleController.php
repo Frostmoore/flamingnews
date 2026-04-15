@@ -16,7 +16,8 @@ class ArticleController extends Controller
 {
     public function index(Request $request, ArticleScoringService $scoring): JsonResponse
     {
-        $userId = optional(auth('sanctum')->user())->id;
+        $user   = auth('sanctum')->user();
+        $userId = optional($user)->id;
 
         $query = Article::with([
             'source:domain,political_lean,name',
@@ -39,10 +40,14 @@ class ArticleController extends Controller
                       '(SELECT COUNT(DISTINCT source_domain) FROM articles AS a2 WHERE a2.topic_id = articles.topic_id) >= 4'
                   );
 
-            $user = $request->user();
             if ($user && !empty($user->preferred_categories)) {
                 $query->whereIn('category', $user->preferred_categories);
             }
+        }
+
+        // Filtra per testate preferite dell'utente (non si applica alla coverage)
+        if ($user && !empty($user->preferred_sources)) {
+            $query->whereIn('source_domain', $user->preferred_sources);
         }
 
         if ($request->filled('q')) {

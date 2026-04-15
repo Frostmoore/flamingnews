@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\Route;
 // Autenticazione
 Route::prefix('auth')->group(function () {
     // Email/password
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login',    [AuthController::class, 'login']);
+    Route::post('/register',        [AuthController::class, 'register']);
+    Route::post('/login',           [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 
     // Google OAuth (web)
     Route::get('/google/redirect',  [AuthController::class, 'googleRedirect']);
@@ -23,7 +25,10 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout',              [AuthController::class, 'logout']);
         Route::get('/me',                   [AuthController::class, 'me']);
+        Route::patch('/profile',            [AuthController::class, 'updateProfile']);
+        Route::patch('/password',           [AuthController::class, 'updatePassword']);
         Route::patch('/categories',         [AuthController::class, 'updateCategories']);
+        Route::patch('/sources',            [AuthController::class, 'updateSources']);
     });
 });
 
@@ -40,6 +45,16 @@ Route::get('/topics/{id}',  [TopicController::class, 'show']);
 
 // Analisi AI (solo Premium, richiede autenticazione)
 Route::post('/topics/{id}/analyze', [TopicController::class, 'analyze'])->middleware('auth:sanctum');
+
+// Testate attive con feed RSS (pubblico — usato nella registrazione)
+Route::get('/sources', fn () => response()->json(
+    \Illuminate\Support\Facades\DB::table('sources')
+        ->where('active', true)
+        ->whereNotNull('feed_url')
+        ->select('domain', 'name', 'political_lean', 'tier')
+        ->orderBy('tier')->orderBy('name')
+        ->get()
+));
 
 // Analytics (pubblico)
 Route::get('/analytics',        [AnalyticsController::class, 'index']);

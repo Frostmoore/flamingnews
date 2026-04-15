@@ -71,15 +71,25 @@ class RssFetcherService
 
     private function parseXml(string $xml, string $feedUrl): array
     {
+        // Detect HTML responses before attempting XML parse (avoids massive libxml error spam)
+        $trimmed = ltrim($xml);
+        if (
+            stripos($trimmed, '<!doctype') === 0 ||
+            stripos($trimmed, '<html') === 0 ||
+            stripos($trimmed, '<!-') === 0
+        ) {
+            Log::warning("RssFetcher: feed returned HTML instead of XML [{$feedUrl}]");
+            return [];
+        }
+
         $xml = $this->fixEncoding($xml);
 
         libxml_use_internal_errors(true);
         $feed = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA);
 
         if ($feed === false) {
-            $errors = array_map(fn($e) => $e->message, libxml_get_errors());
             libxml_clear_errors();
-            Log::warning("RssFetcher: XML parse error [{$feedUrl}]: " . implode('; ', $errors));
+            Log::warning("RssFetcher: XML parse failed [{$feedUrl}]");
             return [];
         }
 
