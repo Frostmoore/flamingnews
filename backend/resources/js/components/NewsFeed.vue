@@ -101,7 +101,7 @@
         <div v-if="visibleArticles.length > 0" class="mb-6">
           <ArticleCard
             :article="visibleArticles[0]"
-            class="md:flex md:gap-6"
+            :featured="true"
             @click="openArticle"
             @like="toggleLike"
           />

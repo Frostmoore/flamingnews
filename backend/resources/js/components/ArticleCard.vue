@@ -1,10 +1,15 @@
 <template>
   <article
-    class="group cursor-pointer bg-white border border-gray-200 hover:border-[#C41E3A] transition-colors duration-200 flex flex-col"
+    class="group cursor-pointer bg-white border border-gray-200 hover:border-[#C41E3A] transition-colors duration-200 flex"
+    :class="featured ? 'flex-row' : 'flex-col'"
     @click="$emit('click', article)"
   >
     <!-- Immagine -->
-    <div v-if="article.url_to_image" class="overflow-hidden aspect-[16/9]">
+    <div
+      v-if="article.url_to_image"
+      class="overflow-hidden flex-shrink-0"
+      :class="featured ? 'w-1/2 aspect-[4/3]' : 'aspect-[16/9] w-full'"
+    >
       <img
         :src="article.url_to_image"
         :alt="decodeHtml(article.title)"
@@ -28,7 +33,7 @@
       <!-- Titolo -->
       <h3
         class="font-display text-[#1A1A1A] leading-snug mb-3 line-clamp-3"
-        :class="compact ? 'text-base' : 'text-lg'"
+        :class="featured ? 'text-2xl' : compact ? 'text-base' : 'text-lg'"
       >{{ decodeHtml(article.title) }}</h3>
 
       <!-- Descrizione -->
@@ -140,6 +145,7 @@ import { ref, computed } from 'vue';
 const props = defineProps({
   article: { type: Object, required: true },
   compact: { type: Boolean, default: false },
+  featured: { type: Boolean, default: false },
 });
 
 defineEmits(['click', 'like']);
