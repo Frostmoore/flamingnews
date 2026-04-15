@@ -22,8 +22,25 @@ class AuthController extends Controller
     // Registrazione email/password
     // -------------------------------------------------------------------------
 
+    // -------------------------------------------------------------------------
+    // Gate registrazioni
+    // -------------------------------------------------------------------------
+
+    private function registrationsClosed(): bool
+    {
+        return filter_var(env('ACTIVE', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    // -------------------------------------------------------------------------
+    // Registrazione email/password
+    // -------------------------------------------------------------------------
+
     public function register(Request $request): JsonResponse
     {
+        if ($this->registrationsClosed()) {
+            return response()->json(['message' => 'Le registrazioni sono temporaneamente chiuse.'], 403);
+        }
+
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
             'email'                 => 'required|email|unique:users,email',
@@ -119,6 +136,14 @@ class AuthController extends Controller
             return redirect(config('app.url') . '/login?error=google_failed');
         }
 
+        $existing = User::where('google_id', $googleUser->getId())
+            ->orWhere('email', $googleUser->getEmail())
+            ->first();
+
+        if (!$existing && $this->registrationsClosed()) {
+            return redirect(config('app.url') . '/login?error=registration_closed');
+        }
+
         $user = User::updateOrCreate(
             ['google_id' => $googleUser->getId()],
             [
@@ -158,6 +183,14 @@ class AuthController extends Controller
             $googleUser = Socialite::driver('google')->stateless()->userFromToken($request->id_token);
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Token Google non valido.'], 401);
+        }
+
+        $existing = User::where('google_id', $googleUser->getId())
+            ->orWhere('email', $googleUser->getEmail())
+            ->first();
+
+        if (!$existing && $this->registrationsClosed()) {
+            return response()->json(['message' => 'Le registrazioni sono temporaneamente chiuse.'], 403);
         }
 
         $user = User::updateOrCreate(
