@@ -35,16 +35,9 @@ return [
         ],
     ],
 
-    'gnews' => [
-        'key' => env('GNEWS_API_KEY'),
-    ],
-
     'worldnews' => [
         'key' => env('WORLDNEWS_API_KEY'),
     ],
-
-    // 'gnews' | 'worldnews' | 'both'
-    'news_provider' => env('NEWS_PROVIDER', 'gnews'),
 
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),

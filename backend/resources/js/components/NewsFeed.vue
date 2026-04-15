@@ -1,38 +1,76 @@
 <template>
   <div class="min-h-screen bg-[#F8F6F1]">
 
-    <!-- Header editoriale -->
-    <header class="border-b border-gray-300 bg-white sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <a href="/" class="font-display text-2xl font-bold text-[#C41E3A] tracking-tight">
-          FlamingNews
-        </a>
-        <nav class="flex items-center gap-1 text-sm" x-data>
-          <a href="/" class="px-3 py-1.5 font-semibold text-[#C41E3A] border-b-2 border-[#C41E3A]">Feed</a>
-          <button
-            @click="toggleAuth"
-            class="ml-4 px-4 py-1.5 text-sm bg-[#C41E3A] text-white rounded hover:bg-red-800 transition-colors"
-          >
-            {{ isAuthenticated ? 'Esci' : 'Accedi' }}
+    <!-- Header: striscia rossa + logo + auth -->
+    <header class="sticky top-0 z-30 bg-white shadow-sm">
+      <!-- Striscia rossa superiore -->
+      <div class="bg-[#C41E3A] h-1 w-full"></div>
+
+      <!-- Logo + auth / barra ricerca -->
+      <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between border-b border-gray-100">
+        <!-- Modalità normale -->
+        <template v-if="!searchActive">
+          <a href="/" class="font-display text-2xl font-bold text-[#1A1A1A] tracking-tight">
+            Flaming<span class="text-[#C41E3A]">News</span>
+          </a>
+          <div class="flex items-center gap-3">
+            <a href="/prime-pagine" class="text-sm font-medium text-gray-500 hover:text-[#C41E3A] transition-colors hidden sm:inline">Prime Pagine</a>
+            <button @click="openSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors" title="Cerca">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+              </svg>
+            </button>
+            <span v-if="isAuthenticated" class="text-xs text-gray-400 hidden sm:inline">{{ userName }}</span>
+            <button
+              @click="toggleAuth"
+              class="px-4 py-1.5 text-xs font-bold tracking-wide border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors uppercase"
+            >{{ isAuthenticated ? 'Esci' : 'Accedi' }}</button>
+          </div>
+        </template>
+
+        <!-- Modalità ricerca -->
+        <template v-else>
+          <button @click="closeSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
           </button>
-        </nav>
+          <input
+            ref="searchInput"
+            v-model="searchQuery"
+            @input="onSearchInput"
+            @keydown.esc="closeSearch"
+            type="search"
+            placeholder="Cerca articoli…"
+            class="flex-1 mx-4 text-sm outline-none bg-transparent placeholder-gray-400"
+          />
+          <button v-if="searchQuery" @click="clearSearch" class="text-gray-400 hover:text-[#1A1A1A] transition-colors flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </template>
+      </div>
+
+      <!-- Barra categorie — scrollabile orizzontalmente -->
+      <div class="border-b border-gray-200 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+          <div class="flex overflow-x-auto scrollbar-hide gap-0 -mb-px">
+            <button
+              v-for="cat in categories"
+              :key="String(cat.value)"
+              @click="selectCategory(cat.value)"
+              class="flex-shrink-0 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors duration-150"
+              :class="activeCategory === cat.value
+                ? 'border-[#C41E3A] text-[#C41E3A]'
+                : 'border-transparent text-gray-500 hover:text-[#1A1A1A] hover:border-gray-300'"
+            >{{ cat.label }}</button>
+          </div>
+        </div>
       </div>
     </header>
 
     <div class="max-w-7xl mx-auto px-4 py-6">
-
-      <!-- Filtri categoria -->
-      <div class="flex gap-2 flex-wrap mb-6 pb-4 border-b border-gray-200">
-        <button
-          v-for="cat in categories"
-          :key="cat.value"
-          @click="selectCategory(cat.value)"
-          class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-          :class="activeCategory === cat.value
-            ? 'bg-[#C41E3A] text-white shadow-sm'
-            : 'bg-white text-gray-600 border border-gray-300 hover:border-[#C41E3A] hover:text-[#C41E3A]'"
-        >{{ cat.label }}</button>
-      </div>
 
       <!-- Loading skeleton -->
       <div v-if="loading" class="articles-grid">
@@ -64,7 +102,7 @@
         <div v-if="articles.length > 0" class="mb-6">
           <ArticleCard
             :article="articles[0]"
-            class="md:flex md:gap-6"
+            :featured="true"
             @click="openArticle"
             @like="toggleLike"
           />
@@ -91,21 +129,15 @@
           </template>
         </div>
 
-        <!-- Paginazione -->
-        <div v-if="meta.last_page > 1" class="mt-8 flex justify-center gap-2">
-          <button
-            v-if="meta.current_page > 1"
-            @click="changePage(meta.current_page - 1)"
-            class="px-4 py-2 border border-gray-300 text-sm hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors"
-          >← Precedente</button>
-          <span class="px-4 py-2 text-sm text-gray-500">
-            {{ meta.current_page }} / {{ meta.last_page }}
-          </span>
-          <button
-            v-if="meta.current_page < meta.last_page"
-            @click="changePage(meta.current_page + 1)"
-            class="px-4 py-2 border border-gray-300 text-sm hover:border-[#C41E3A] hover:text-[#C41E3A] transition-colors"
-          >Successiva →</button>
+        <!-- Sentinel lazy load -->
+        <div ref="sentinel" class="h-10"></div>
+
+        <!-- Spinner caricamento ulteriori articoli -->
+        <div v-if="loadingMore" class="flex justify-center py-6">
+          <svg class="animate-spin w-6 h-6 text-[#C41E3A]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
         </div>
       </template>
     </div>
@@ -113,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useArticles } from '../composables/useArticles';
 import { useAuth } from '../composables/useAuth';
 import ArticleCard from './ArticleCard.vue';
@@ -125,10 +157,44 @@ const props = defineProps({
   adsenseFrequency:  { type: String, default: '6' },
 });
 
-const { articles, meta, loading, error, fetchArticles, toggleLike } = useArticles();
-const { isAuthenticated, logout } = useAuth();
+const { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, toggleLike } = useArticles();
+const { user, isAuthenticated, logout } = useAuth();
+const userName = computed(() => user.value?.name ?? '');
 
 const activeCategory = ref(null);
+const sentinel = ref(null);
+let observer = null;
+
+// ── Ricerca ───────────────────────────────────────────────────────────────
+const searchActive = ref(false);
+const searchQuery  = ref('');
+const searchInput  = ref(null);
+let   searchTimer  = null;
+
+async function openSearch() {
+  searchActive.value = true;
+  await nextTick();
+  searchInput.value?.focus();
+}
+
+function closeSearch() {
+  searchActive.value = false;
+  searchQuery.value  = '';
+  clearTimeout(searchTimer);
+  load(1);
+}
+
+function clearSearch() {
+  searchQuery.value = '';
+  clearTimeout(searchTimer);
+  load(1);
+  searchInput.value?.focus();
+}
+
+function onSearchInput() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => load(1), 350);
+}
 
 // Intercala un placeholder annuncio ogni N articoli (escluso il primo in evidenza)
 const feedItems = computed(() => {
@@ -145,7 +211,7 @@ const feedItems = computed(() => {
 });
 
 const categories = [
-  { value: null,          label: 'Tutte' },
+  { value: null,          label: 'Temi' },
   { value: 'politica',    label: 'Politica' },
   { value: 'economia',    label: 'Economia' },
   { value: 'esteri',      label: 'Esteri' },
@@ -162,17 +228,27 @@ const categories = [
 ];
 
 async function load(page = 1) {
-  await fetchArticles({ category: activeCategory.value, page });
+  await fetchArticles({ category: activeCategory.value, page, q: searchQuery.value });
+  if (page === 1) await nextTick().then(setupObserver);
+}
+
+async function loadMore() {
+  if (loadingMore.value || loading.value) return;
+  if (hasMore()) await load(meta.value.current_page + 1);
+}
+
+function setupObserver() {
+  if (observer) observer.disconnect();
+  observer = new IntersectionObserver(
+    (entries) => { if (entries[0].isIntersecting) loadMore(); },
+    { rootMargin: '400px' }
+  );
+  if (sentinel.value) observer.observe(sentinel.value);
 }
 
 function selectCategory(value) {
   activeCategory.value = value;
   load(1);
-}
-
-function changePage(page) {
-  load(page);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function openArticle(article) {
@@ -187,5 +263,11 @@ function toggleAuth() {
   }
 }
 
-onMounted(() => load());
+onMounted(async () => {
+  await load();
+  await nextTick();
+  setupObserver();
+});
+
+onBeforeUnmount(() => { if (observer) observer.disconnect(); });
 </script>

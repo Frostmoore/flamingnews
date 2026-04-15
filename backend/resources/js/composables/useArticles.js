@@ -11,48 +11,53 @@ const PER_CATEGORY = 6; // articoli per categoria in modalità "Tutte"
 
 export function useArticles() {
     const articles = ref([]);
-    const meta = ref({ current_page: 1, last_page: 1, per_page: 20, total: 0 });
+    const meta = ref({ current_page: 1, last_page: 1, per_page: 10, total: 0 });
     const loading = ref(false);
+    const loadingMore = ref(false);
     const error = ref(null);
 
-    async function fetchArticles({ category = null, page = 1, perPage = 20 } = {}) {
-        loading.value = true;
+    const hasMore = () => meta.value.current_page < meta.value.last_page;
+
+    async function fetchArticles({ category = null, page = 1, perPage = 10, q = '' } = {}) {
+        const appending = page > 1;
+        if (appending) {
+            loadingMore.value = true;
+        } else {
+            loading.value = true;
+        }
         error.value = null;
 
         try {
+            // Ricerca: singola chiamata con parametro q
+            if (q) {
+                const params = { q, page, per_page: perPage };
+                if (category) params.category = category;
+                const res = await axios.get('/api/articles', { params });
+                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
+                meta.value = res.data.meta;
+                return;
+            }
+
             if (!category) {
-                // Una chiamata per ogni categoria in parallelo
-                const responses = await Promise.all(
-                    ALL_CATEGORIES.map(cat =>
-                        axios.get('/api/articles', {
-                            params: { category: cat, page: 1, per_page: PER_CATEGORY },
-                        })
-                    )
-                );
-
-                // Unisci e ordina per data
-                const all = responses.flatMap(r => r.data.data);
-                all.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
-
-                articles.value = all;
-                meta.value = {
-                    current_page: 1,
-                    last_page: 1,
-                    per_page: all.length,
-                    total: all.length,
-                };
+                // Tab "Temi": singola chiamata paginata, il backend filtra per multi-testata
+                const res = await axios.get('/api/articles', {
+                    params: { page, per_page: perPage },
+                });
+                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
+                meta.value = res.data.meta;
             } else {
-                // Singola categoria: comportamento normale con paginazione
+                // Singola categoria: lazy load con paginazione
                 const res = await axios.get('/api/articles', {
                     params: { category, page, per_page: perPage },
                 });
-                articles.value = res.data.data;
+                articles.value = appending ? [...articles.value, ...res.data.data] : res.data.data;
                 meta.value = res.data.meta;
             }
         } catch (e) {
             error.value = e.response?.data?.message || 'Errore nel caricamento degli articoli.';
         } finally {
             loading.value = false;
+            loadingMore.value = false;
         }
     }
 
@@ -80,5 +85,5 @@ export function useArticles() {
         }
     }
 
-    return { articles, meta, loading, error, fetchArticles, fetchArticle, toggleLike };
+    return { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, fetchArticle, toggleLike };
 }

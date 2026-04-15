@@ -14,6 +14,7 @@ class ArticlesState {
   final int currentPage;
   final int lastPage;
   final bool loading;
+  final bool loadingMore;
   final String? error;
 
   const ArticlesState({
@@ -21,14 +22,18 @@ class ArticlesState {
     this.currentPage = 1,
     this.lastPage = 1,
     this.loading = false,
+    this.loadingMore = false,
     this.error,
   });
+
+  bool get hasMore => currentPage < lastPage;
 
   ArticlesState copyWith({
     List<Article>? articles,
     int? currentPage,
     int? lastPage,
     bool? loading,
+    bool? loadingMore,
     String? error,
   }) =>
       ArticlesState(
@@ -36,6 +41,7 @@ class ArticlesState {
         currentPage: currentPage ?? this.currentPage,
         lastPage: lastPage ?? this.lastPage,
         loading: loading ?? this.loading,
+        loadingMore: loadingMore ?? this.loadingMore,
         error: error,
       );
 }
@@ -43,65 +49,86 @@ class ArticlesState {
 class ArticlesNotifier extends StateNotifier<ArticlesState> {
   final Ref _ref;
   String? _activeCategory;
+  String? _activeQuery;
 
   ArticlesNotifier(this._ref) : super(const ArticlesState());
 
-  Future<void> fetchArticles({String? category, int page = 1}) async {
+  Future<void> fetchArticles({String? category, int page = 1, String? q}) async {
     _activeCategory = category;
-    state = state.copyWith(loading: true, error: null);
+    _activeQuery    = q;
+
+    final appending = page > 1;
+    if (appending) {
+      state = state.copyWith(loadingMore: true, error: null);
+    } else {
+      state = state.copyWith(loading: true, error: null);
+    }
 
     try {
       final dio = _ref.read(dioProvider);
 
-      if (category == null) {
-        // Una chiamata per ogni categoria in parallelo
-        final responses = await Future.wait(
-          _allCategories.map(
-            (cat) => dio.get('/articles', queryParameters: {
-              'category': cat,
-              'page': 1,
-              'per_page': _perCategory,
-            }),
-          ),
+      // ── Ricerca ──────────────────────────────────────────────
+      if (q != null && q.isNotEmpty) {
+        final params = <String, dynamic>{'q': q, 'page': page, 'per_page': 10};
+        if (category != null) params['category'] = category;
+        final response = await dio.get('/articles', queryParameters: params);
+        final newItems = _parseItems(response);
+        final meta    = response.data['meta'] as Map<String, dynamic>;
+        state = state.copyWith(
+          articles:    appending ? [...state.articles, ...newItems] : newItems,
+          currentPage: meta['current_page'] as int,
+          lastPage:    meta['last_page'] as int,
+          loading:     false,
+          loadingMore: false,
         );
+        return;
+      }
 
-        // Unisci e ordina per data
+      // ── Tutte le categorie ───────────────────────────────────
+      if (category == null) {
+        final responses = await Future.wait(
+          _allCategories.map((cat) => dio.get('/articles', queryParameters: {
+            'category': cat, 'page': 1, 'per_page': _perCategory,
+          })),
+        );
         final items = responses
-            .expand((r) => (r.data['data'] as List<dynamic>)
-                .map((e) => Article.fromJson(e as Map<String, dynamic>)))
+            .expand((r) => _parseItems(r))
             .toList()
           ..sort((a, b) => (b.publishedAt ?? DateTime(0)).compareTo(a.publishedAt ?? DateTime(0)));
 
         state = state.copyWith(
-          articles: items,
+          articles:    items,
           currentPage: 1,
-          lastPage: 1,
-          loading: false,
+          lastPage:    1,
+          loading:     false,
+          loadingMore: false,
         );
+
+      // ── Singola categoria ────────────────────────────────────
       } else {
-        // Singola categoria: comportamento normale con paginazione
         final response = await dio.get('/articles', queryParameters: {
-          'page': page,
-          'per_page': 20,
-          'category': category,
+          'page': page, 'per_page': 10, 'category': category,
         });
-        final data = response.data as Map<String, dynamic>;
-        final items = (data['data'] as List<dynamic>)
-            .map((e) => Article.fromJson(e as Map<String, dynamic>))
-            .toList();
-        final meta = data['meta'] as Map<String, dynamic>;
+        final newItems = _parseItems(response);
+        final meta    = response.data['meta'] as Map<String, dynamic>;
 
         state = state.copyWith(
-          articles: items,
+          articles:    appending ? [...state.articles, ...newItems] : newItems,
           currentPage: meta['current_page'] as int,
-          lastPage: meta['last_page'] as int,
-          loading: false,
+          lastPage:    meta['last_page'] as int,
+          loading:     false,
+          loadingMore: false,
         );
       }
     } catch (e) {
-      state = state.copyWith(loading: false, error: e.toString());
+      state = state.copyWith(loading: false, loadingMore: false, error: e.toString());
     }
   }
+
+  List<Article> _parseItems(dynamic response) =>
+      (response.data['data'] as List<dynamic>)
+          .map((e) => Article.fromJson(e as Map<String, dynamic>))
+          .toList();
 
   Future<void> toggleLike(int articleId) async {
     try {
@@ -120,8 +147,12 @@ class ArticlesNotifier extends StateNotifier<ArticlesState> {
   }
 
   Future<void> nextPage() async {
-    if (state.currentPage < state.lastPage) {
-      await fetchArticles(category: _activeCategory, page: state.currentPage + 1);
+    if (state.hasMore && !state.loadingMore && !state.loading) {
+      await fetchArticles(
+        category: _activeCategory,
+        page:     state.currentPage + 1,
+        q:        _activeQuery,
+      );
     }
   }
 }

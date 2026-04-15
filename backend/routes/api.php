@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PrimePagineController;
 use App\Http\Controllers\Api\TopicController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,9 @@ Route::prefix('auth')->group(function () {
 Route::get('/articles',      [ArticleController::class, 'index']);
 Route::get('/articles/{id}', [ArticleController::class, 'show'])->middleware('auth:sanctum')->withoutMiddleware('auth:sanctum');
 Route::post('/articles/{id}/like', [ArticleController::class, 'like'])->middleware('auth:sanctum');
+
+// Prime pagine (pubblico)
+Route::get('/prima-pagine', [PrimePagineController::class, 'index']);
 
 // Topics (pubblico)
 Route::get('/topics',       [TopicController::class, 'index']);

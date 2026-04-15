@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/providers/auth_provider.dart';
 import 'features/feed/feed_screen.dart';
+import 'features/prime_pagine/prime_pagine_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/categories_screen.dart';
@@ -52,8 +53,9 @@ final _router = GoRouter(
     ShellRoute(
       builder: (ctx, state, child) => _Shell(child: child),
       routes: [
-        GoRoute(path: '/',         builder: (ctx, _) => const FeedScreen()),
-        GoRoute(path: '/settings', builder: (ctx, _) => const SettingsScreen()),
+        GoRoute(path: '/',              builder: (ctx, _) => const FeedScreen()),
+        GoRoute(path: '/prime-pagine',  builder: (ctx, _) => const PrimePagineScreen()),
+        GoRoute(path: '/settings',      builder: (ctx, _) => const SettingsScreen()),
       ],
     ),
     GoRoute(path: '/login',      builder: (ctx, _) => const LoginScreen()),
@@ -120,7 +122,11 @@ class _Shell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final currentIndex = location.startsWith('/settings') ? 1 : 0;
+    final currentIndex = location.startsWith('/settings')
+        ? 2
+        : location.startsWith('/prime-pagine')
+            ? 1
+            : 0;
 
     return Scaffold(
       body: child,
@@ -130,13 +136,19 @@ class _Shell extends StatelessWidget {
         selectedIndex: currentIndex,
         onDestinationSelected: (i) {
           if (i == 0) context.go('/');
-          if (i == 1) context.go('/settings');
+          if (i == 1) context.go('/prime-pagine');
+          if (i == 2) context.go('/settings');
         },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.newspaper_outlined),
             selectedIcon: Icon(Icons.newspaper),
             label: 'Feed',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_stories_outlined),
+            selectedIcon: Icon(Icons.auto_stories),
+            label: 'Prime Pagine',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

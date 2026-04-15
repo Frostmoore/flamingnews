@@ -17,12 +17,36 @@ class ArticleController extends Controller
 
         $query = Article::with([
             'source:domain,political_lean,name',
-            'topic.articles:id,source_name,source_domain,url,topic_id',
+            'topic.articles:id,title,source_name,source_domain,url,topic_id',
             'topic.articles.source:domain,political_lean',
-        ])->withCount('likes')->latest('published_at');
+        ])->withCount('likes')
+          ->where('is_main', true)   // mostra solo l'articolo rappresentativo per topic
+          ->latest('published_at');
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
+        } else {
+            // Tab "Temi": solo articoli coperti da più testate DIVERSE
+            $query->whereNotNull('topic_id')
+                  ->whereExists(function ($sub) {
+                      $sub->selectRaw('1')
+                          ->from('articles as a2')
+                          ->whereColumn('a2.topic_id', 'articles.topic_id')
+                          ->whereColumn('a2.source_domain', '!=', 'articles.source_domain');
+                  });
+
+            $user = $request->user();
+            if ($user && !empty($user->preferred_categories)) {
+                $query->whereIn('category', $user->preferred_categories);
+            }
+        }
+
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('title', 'LIKE', "%{$q}%")
+                    ->orWhere('description', 'LIKE', "%{$q}%");
+            });
         }
 
         $articles = $query->paginate($request->integer('per_page', 20));
@@ -50,7 +74,7 @@ class ArticleController extends Controller
     {
         $article = Article::with([
             'source:domain,political_lean,name',
-            'topic.articles:id,source_name,source_domain,url,topic_id',
+            'topic.articles:id,title,source_name,source_domain,url,topic_id',
             'topic.articles.source:domain,political_lean',
         ])->findOrFail($id);
 

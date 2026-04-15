@@ -15,6 +15,7 @@ class AuthController extends Controller
 {
     private const VALID_CATEGORIES = [
         'politica', 'economia', 'esteri', 'tecnologia', 'sport', 'cultura',
+        'generale', 'scienza', 'salute', 'ambiente', 'istruzione', 'cibo', 'viaggi',
     ];
 
     // -------------------------------------------------------------------------
