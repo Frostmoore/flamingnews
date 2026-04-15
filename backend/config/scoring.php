@@ -31,11 +31,11 @@ return [
 
     'weights' => [
         //                              valore   significato
-        'sources'  =>  900,   //  1 testata aggiuntiva      → +15 min
-        'variety'  => 1800,   //  1 orientamento in più     → +30 min
-        'shares'   =>  180,   //  1 condivisione            →  +3 min
-        'likes'    =>   60,   //  1 like                    →  +1 min
-        'neutral'  =>  600,   //  1 fonte neutrale/centro   → +10 min
+        'sources'  =>  300,   //  1 testata aggiuntiva      →  +5 min
+        'variety'  =>  600,   //  1 orientamento in più     → +10 min
+        'shares'   =>   60,   //  1 condivisione            →  +1 min
+        'likes'    =>   20,   //  1 like                    → +20 sec
+        'neutral'  =>  180,   //  1 fonte neutrale/centro   →  +3 min
     ],
 
     // Orientamenti considerati "neutrali" per il peso w_neutral

@@ -21,7 +21,6 @@ class SourcesSeeder extends Seeder
             ['domain' => 'repubblica.it',        'name' => 'La Repubblica',           'political_lean' => 'center-left',   'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://www.repubblica.it/rss/homepage/rss2.0.xml'],
             ['domain' => 'ilfattoquotidiano.it',  'name' => 'Il Fatto Quotidiano',     'political_lean' => 'center-left',   'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://www.ilfattoquotidiano.it/feed/'],
             ['domain' => 'fanpage.it',            'name' => 'Fanpage',                 'political_lean' => 'center-left',   'country' => 'IT', 'tier' => 1, 'feed_url' => null],
-            ['domain' => 'domani.it',             'name' => 'Domani',                  'political_lean' => 'center-left',   'country' => 'IT', 'tier' => 2, 'feed_url' => null],
             ['domain' => 'editorialedomani.it',   'name' => 'Domani',                  'political_lean' => 'center-left',   'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://editorialedomani.it/feed'],
             ['domain' => 'huffingtonpost.it',     'name' => 'HuffPost Italia',         'political_lean' => 'center-left',   'country' => 'IT', 'tier' => 2, 'feed_url' => null],
             ['domain' => 'linkiesta.it',          'name' => 'Linkiesta',               'political_lean' => 'center-left',   'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.linkiesta.it/feed/'],
@@ -38,10 +37,7 @@ class SourcesSeeder extends Seeder
             ['domain' => 'lastampa.it',           'name' => 'La Stampa',               'political_lean' => 'center-right',  'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://www.lastampa.it/rss/'],
             ['domain' => 'ilmessaggero.it',       'name' => 'Il Messaggero',           'political_lean' => 'center-right',  'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://www.ilmessaggero.it/rss/news.xml'],
             ['domain' => 'ilfoglio.it',           'name' => 'Il Foglio',               'political_lean' => 'center-right',  'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://www.ilfoglio.it/feed/'],
-            ['domain' => 'lanazione.it',          'name' => 'La Nazione',              'political_lean' => 'center-right',  'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.lanazione.it/rss/news.xml'],
-            ['domain' => 'ilmattino.it',          'name' => 'Il Mattino',              'political_lean' => 'center-right',  'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.ilmattino.it/rss/news.xml'],
             ['domain' => 'panorama.it',           'name' => 'Panorama',                'political_lean' => 'center-right',  'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.panorama.it/feed'],
-            ['domain' => 'affaritaliani.it',      'name' => 'Affari Italiani',         'political_lean' => 'center-right',  'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.affaritaliani.it/feed'],
 
             // ── DESTRA ────────────────────────────────────────────────────────
             ['domain' => 'ilgiornale.it',         'name' => 'Il Giornale',             'political_lean' => 'right',         'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://www.ilgiornale.it/feed.xml'],
@@ -60,14 +56,7 @@ class SourcesSeeder extends Seeder
             ['domain' => 'skytg24.it',            'name' => 'Sky TG24',                'political_lean' => 'altro',         'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://tg24.sky.it/rss/tg24.xml'],
             ['domain' => 'milanofinanza.it',      'name' => 'Milano Finanza',          'political_lean' => 'altro',         'country' => 'IT', 'tier' => 1, 'feed_url' => null],
             ['domain' => 'tgcom24.it',            'name' => 'TGCom24',                 'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.tgcom24.mediaset.it/rss/home.xml'],
-            ['domain' => 'mediaset.it',           'name' => 'Mediaset',                'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => null],
-            ['domain' => 'sky.it',                'name' => 'Sky TG24',                'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => null],
-            ['domain' => 'virgilio.it',           'name' => 'Virgilio News',           'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => null],
-            ['domain' => 'leggo.it',              'name' => 'Leggo',                   'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.leggo.it/rss/homepage.xml'],
             ['domain' => 'quotidiano.net',        'name' => 'Quotidiano.net',          'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => 'https://www.quotidiano.net/rss/'],
-            ['domain' => 'vanityfair.it',         'name' => 'Vanity Fair',             'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => null],
-            ['domain' => 'money.it',              'name' => 'Money.it',                'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => null],
-            ['domain' => 'static.milanofinanza.it','name' => 'Milano Finanza',         'political_lean' => 'altro',         'country' => 'IT', 'tier' => 2, 'feed_url' => null],
 
             // ── SPORT ─────────────────────────────────────────────────────────
             ['domain' => 'gazzetta.it',           'name' => 'La Gazzetta dello Sport', 'political_lean' => 'altro',         'country' => 'IT', 'tier' => 1, 'feed_url' => 'https://www.gazzetta.it/rss/home.xml'],
@@ -79,11 +68,16 @@ class SourcesSeeder extends Seeder
 
         ];
 
+        $domains = array_column($sources, 'domain');
+
         foreach ($sources as $source) {
             Source::updateOrCreate(
                 ['domain' => $source['domain']],
                 array_merge($source, ['active' => true])
             );
         }
+
+        // Disattiva fonti rimosse dalla lista (non le cancella per preservare gli FK sugli articoli)
+        Source::whereNotIn('domain', $domains)->update(['active' => false]);
     }
 }
