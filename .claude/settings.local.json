@@ -73,7 +73,8 @@
       "Bash(start /B python cluster.py)",
       "Bash(curl -s http://localhost:8765/health)",
       "Bash(powershell -Command \"Start-Process python -ArgumentList 'cluster.py' -WindowStyle Hidden\")",
-      "Bash(powershell -Command \"Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force\")"
+      "Bash(powershell -Command \"Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(dart analyze:*)"
     ],
     "additionalDirectories": [
       "E:\\coding\\XAMPP\\htdocs\\flamingnews",

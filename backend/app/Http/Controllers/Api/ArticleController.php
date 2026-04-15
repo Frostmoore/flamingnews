@@ -23,6 +23,9 @@ class ArticleController extends Controller
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
+        } elseif ($user && !empty($user->preferred_categories)) {
+            // Tab "Tutte": mostra solo le categorie scelte dall'utente
+            $query->whereIn('category', $user->preferred_categories);
         }
 
         if ($request->filled('q')) {

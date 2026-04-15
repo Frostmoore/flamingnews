@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Article;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -12,13 +11,20 @@ class WorldNewsService
     private string $baseUrl = 'https://api.worldnewsapi.com';
 
     /**
-     * Mapping from internal category slugs → World News API categories.
-     * null = nessun filtro categoria (usa solo lingua/paese).
+     * Categorie thin — poco rappresentate in /top-news,
+     * fetchate separatamente via /search-news.
+     */
+    public const THIN_CATEGORIES = [
+        'cibo', 'viaggi', 'istruzione', 'ambiente', 'scienza', 'salute',
+    ];
+
+    /**
+     * Mapping categoria interna → categoria World News API.
      */
     private array $categoryMap = [
         'politica'   => 'politics',
         'economia'   => 'business',
-        'esteri'     => null,          // broad language filter senza categoria
+        'esteri'     => null,
         'tecnologia' => 'technology',
         'sport'      => 'sports',
         'cultura'    => 'entertainment',
@@ -31,16 +37,67 @@ class WorldNewsService
         'viaggi'     => 'travel',
     ];
 
+    /**
+     * Mapping inverso: categoria World News → categoria interna.
+     */
+    private array $reverseCategoryMap;
+
     public function __construct()
     {
         $this->apiKey = config('services.worldnews.key', '');
+        $this->reverseCategoryMap = array_flip(array_filter($this->categoryMap));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TOP NEWS — cluster già pronti dall'API
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Chiama /top-news e restituisce la struttura cluster intatta.
+     * Ogni elemento: ['news' => [article, ...]]
+     * dove article ha: id, title, text, summary, url, image, publish_date,
+     *                   authors, language, category, source_country
+     */
+    public function fetchTopNewsRaw(): array
+    {
+        $response = Http::timeout(20)->get("{$this->baseUrl}/top-news", [
+            'api-key'        => $this->apiKey,
+            'source-country' => 'it',
+            'language'       => 'it',
+        ]);
+
+        $this->logQuota($response, 'top-news');
+
+        if ($response->failed()) {
+            Log::warning('WorldNews /top-news failed', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            return [];
+        }
+
+        return $response->json('top_news', []);
     }
 
     /**
-     * Fetch top news for a given internal category.
-     * Uses /search-news with language=it and optional category filter.
+     * Mappa la categoria WN di un articolo alla categoria interna FlamingNews.
+     * Fallback: 'generale'.
      */
-    public function fetchByCategory(string $category, int $max = 10): array
+    public function mapCategory(?string $wnCategory): string
+    {
+        if (!$wnCategory) return 'generale';
+        return $this->reverseCategoryMap[strtolower($wnCategory)] ?? 'generale';
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // THIN CATEGORIES — /search-news per categorie poco rappresentate in top-news
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Fetcha articoli per una categoria thin via /search-news.
+     * number=30: costo invariato rispetto a number=10 (~1.1 punti/call).
+     */
+    public function fetchThinCategory(string $category, int $number = 30): array
     {
         $wnCategory = $this->categoryMap[$category] ?? null;
 
@@ -48,7 +105,7 @@ class WorldNewsService
             'api-key'          => $this->apiKey,
             'language'         => 'it',
             'source-countries' => 'it',
-            'number'           => $max,
+            'number'           => $number,
             'sort'             => 'publish-time',
             'sort-direction'   => 'DESC',
         ];
@@ -57,15 +114,12 @@ class WorldNewsService
             $params['categories'] = $wnCategory;
         }
 
-        // Per "esteri" apriamo a tutte le lingue ma filtriamo per italiano
-        if ($category === 'esteri') {
-            unset($params['source-countries']);
-        }
-
         $response = Http::timeout(20)->get("{$this->baseUrl}/search-news", $params);
 
+        $this->logQuota($response, "search-news/{$category}");
+
         if ($response->failed()) {
-            Log::warning("WorldNews fetch failed for category '{$category}'", [
+            Log::warning("WorldNews /search-news failed for '{$category}'", [
                 'status' => $response->status(),
                 'body'   => $response->body(),
             ]);
@@ -75,98 +129,11 @@ class WorldNewsService
         return $response->json('news', []);
     }
 
-    /**
-     * Fetch the most significant stories from Italy via /top-news.
-     * Returns a flat array of articles (appiattisce la struttura top_news[].news[]).
-     */
-    public function fetchTopNews(int $max = 30): array
-    {
-        $response = Http::timeout(20)->get("{$this->baseUrl}/top-news", [
-            'api-key'        => $this->apiKey,
-            'source-country' => 'it',
-            'language'       => 'it',
-        ]);
+    // ─────────────────────────────────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
 
-        if ($response->failed()) {
-            Log::warning("WorldNews top-news failed", [
-                'status' => $response->status(),
-                'body'   => $response->body(),
-            ]);
-            return [];
-        }
-
-        // La risposta è: { "top_news": [ { "news": [...] }, ... ] }
-        $groups = $response->json('top_news', []);
-        $flat   = [];
-        foreach ($groups as $group) {
-            foreach ($group['news'] ?? [] as $article) {
-                $flat[] = $article;
-                if (count($flat) >= $max) break 2;
-            }
-        }
-
-        return $flat;
-    }
-
-    /**
-     * Persist a batch of raw World News articles for a given category.
-     * Skips duplicates (by URL). Returns the count of newly saved articles.
-     */
-    public function saveArticles(array $articles, string $category): int
-    {
-        $saved = 0;
-
-        foreach ($articles as $raw) {
-            $url = $raw['url'] ?? null;
-            if (empty($url)) {
-                continue;
-            }
-
-            if (Article::where('url', $url)->exists()) {
-                continue;
-            }
-
-            $sourceDomain = $this->extractDomain($url);
-
-            // World News: autori è un array
-            $author = null;
-            if (!empty($raw['authors']) && is_array($raw['authors'])) {
-                $author = implode(', ', array_slice($raw['authors'], 0, 2));
-            }
-
-            // publish_date formato "2026-04-14 10:00:00" oppure ISO
-            $publishedAt = null;
-            if (!empty($raw['publish_date'])) {
-                $publishedAt = date('Y-m-d H:i:s', strtotime($raw['publish_date']));
-            }
-
-            // Immagine: prova prima "image" (stringa), poi "images[0].url" (array)
-            $image = $raw['image'] ?? null;
-            if (empty($image) && !empty($raw['images']) && is_array($raw['images'])) {
-                $image = $raw['images'][0]['url'] ?? null;
-            }
-            $image = $this->fixImageUrl($image ?: null);
-
-            Article::create([
-                'title'        => $this->decodeHtml($raw['title']   ?? ''),
-                'description'  => $this->decodeHtml($raw['summary'] ?? ''),
-                'content'      => $this->decodeHtml($raw['text']    ?? ''),
-                'url'          => $url,
-                'url_to_image' => $image,
-                'source_name'  => $this->guessSourceName($sourceDomain),
-                'source_domain'=> $sourceDomain,
-                'author'       => $author ? $this->decodeHtml($author) : null,
-                'published_at' => $publishedAt,
-                'category'     => $category,
-            ]);
-
-            $saved++;
-        }
-
-        return $saved;
-    }
-
-    private function extractDomain(string $url): string
+    public function extractDomain(string $url): string
     {
         $host  = parse_url($url, PHP_URL_HOST) ?? $url;
         $host  = ltrim((string) $host, 'www.');
@@ -176,35 +143,56 @@ class WorldNewsService
             : $host;
     }
 
-    /**
-     * World News non restituisce il nome della testata — lo ricaviamo dal dominio.
-     * Esempio: corriere.it → Corriere, gazzetta.it → Gazzetta
-     */
-    /**
-     * World News API restituisce le immagini come URL relativi proxati:
-     *   /remote/static.milanofinanza.it/path/img.jpg
-     * Le convertiamo in URL diretti:
-     *   https://static.milanofinanza.it/path/img.jpg
-     */
-    private function fixImageUrl(?string $url): ?string
+    public function fixImageUrl(?string $url): ?string
     {
         if (empty($url)) return null;
-
         if (str_starts_with($url, '/remote/')) {
             return 'https://' . substr($url, strlen('/remote/'));
         }
-
         return $url;
     }
 
-    private function decodeHtml(string $text): string
+    public function decodeHtml(string $text): string
     {
         return html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
-    private function guessSourceName(string $domain): string
+    public function guessSourceName(string $domain): string
     {
-        $name = explode('.', $domain)[0];
-        return ucfirst($name);
+        return ucfirst(explode('.', $domain)[0]);
+    }
+
+    public function parsePublishedAt(?string $raw): ?string
+    {
+        if (empty($raw)) return null;
+        return date('Y-m-d H:i:s', strtotime($raw));
+    }
+
+    public function parseAuthors(?array $authors): ?string
+    {
+        if (empty($authors) || !is_array($authors)) return null;
+        return implode(', ', array_slice($authors, 0, 2));
+    }
+
+    public function parseImage(array $raw): ?string
+    {
+        $image = $raw['image'] ?? null;
+        if (empty($image) && !empty($raw['images']) && is_array($raw['images'])) {
+            $image = $raw['images'][0]['url'] ?? null;
+        }
+        return $this->fixImageUrl($image ?: null);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // QUOTA LOGGING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function logQuota($response, string $endpoint): void
+    {
+        Log::info("WorldNews quota [{$endpoint}]", [
+            'request' => $response->header('X-Api-Quota-Request'),
+            'used'    => $response->header('X-Api-Quota-Used'),
+            'left'    => $response->header('X-Api-Quota-Left'),
+        ]);
     }
 }

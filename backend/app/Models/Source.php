@@ -12,6 +12,7 @@ class Source extends Model
         'political_lean',
         'country',
         'active',
+        'tier',
     ];
 
     protected function casts(): array
