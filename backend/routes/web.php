@@ -14,3 +14,6 @@ Route::get('/articles/{id}',  fn () => view('pages.article'));
 // Auth
 Route::get('/login',    fn () => view('auth.login'));
 Route::get('/register', fn () => view('auth.register'));
+
+// Analytics
+Route::get('/analytics', fn () => view('pages.analytics'));

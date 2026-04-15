@@ -3,9 +3,10 @@ import { createApp } from 'vue';
 import Alpine from 'alpinejs';
 
 // Componenti Vue
-import NewsFeed from './components/NewsFeed.vue';
-import CoverageComparative from './components/CoverageComparative.vue';
+import Analytics from './components/Analytics.vue';
 import ArticleDetail from './components/ArticleDetail.vue';
+import CoverageComparative from './components/CoverageComparative.vue';
+import NewsFeed from './components/NewsFeed.vue';
 
 // Alpine.js — micro-interazioni
 window.Alpine = Alpine;
@@ -13,7 +14,7 @@ Alpine.start();
 
 // Mount Vue selettivo: ogni pagina Blade espone un div con data-vue-component
 // I data-* del div vengono passati come props al componente
-const vueComponents = { NewsFeed, CoverageComparative, ArticleDetail };
+const vueComponents = { Analytics, ArticleDetail, CoverageComparative, NewsFeed };
 
 document.querySelectorAll('[data-vue-component]').forEach((el) => {
     const name = el.dataset.vueComponent;

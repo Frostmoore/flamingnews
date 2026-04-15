@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TopicController;
@@ -39,3 +40,6 @@ Route::get('/topics/{id}',  [TopicController::class, 'show']);
 
 // Analisi AI (solo Premium, richiede autenticazione)
 Route::post('/topics/{id}/analyze', [TopicController::class, 'analyze'])->middleware('auth:sanctum');
+
+// Analytics (pubblico)
+Route::get('/analytics', [AnalyticsController::class, 'index']);
