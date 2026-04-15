@@ -5,23 +5,27 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\ArticleLike;
+use App\Models\ArticleShare;
 use App\Models\UserRead;
+use App\Services\ArticleScoringService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ArticleController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ArticleScoringService $scoring): JsonResponse
     {
-        $userId = optional($request->user())->id;
+        $userId = optional(auth('sanctum')->user())->id;
 
         $query = Article::with([
             'source:domain,political_lean,name',
-            'topic.articles:id,title,source_name,source_domain,url,topic_id',
+            'topic.articles' => fn ($q) => $q
+                ->select(['id', 'title', 'source_name', 'source_domain', 'url', 'topic_id'])
+                ->withCount(['likes', 'shares']),
             'topic.articles.source:domain,political_lean',
-        ])->withCount('likes')
-          ->where('is_main', true)   // mostra solo l'articolo rappresentativo per topic
-          ->latest('published_at');
+        ])->withCount(['likes', 'shares'])
+          ->where('is_main', true)
+          ->orderByRaw($scoring->orderByExpression());
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
@@ -50,16 +54,27 @@ class ArticleController extends Controller
 
         $articles = $query->paginate($request->integer('per_page', 20));
 
-        // IDs già messi in like dall'utente autenticato (solo per questa pagina)
+        // ── Batch query liked/shared per main + coverage articles ──────────
+        $coverageIds = collect($articles->items())->flatMap(function ($a) {
+            if ($a->topic_id && $a->relationLoaded('topic') && $a->topic) {
+                return $a->topic->articles->pluck('id');
+            }
+            return [];
+        });
+        $allIds = collect($articles->items())->pluck('id')->merge($coverageIds)->unique();
+
         $likedIds = $userId
-            ? ArticleLike::where('user_id', $userId)
-                ->whereIn('article_id', collect($articles->items())->pluck('id'))
-                ->pluck('article_id')
-                ->flip()
+            ? ArticleLike::where('user_id', $userId)->whereIn('article_id', $allIds)->pluck('article_id')->flip()
+            : collect();
+
+        $sharedIds = $userId
+            ? ArticleShare::where('user_id', $userId)->whereIn('article_id', $allIds)->pluck('article_id')->flip()
             : collect();
 
         return response()->json([
-            'data' => collect($articles->items())->map(fn ($a) => $this->formatArticle($a, likedIds: $likedIds)),
+            'data' => collect($articles->items())->map(
+                fn ($a) => $this->formatArticle($a, likedIds: $likedIds, sharedIds: $sharedIds)
+            ),
             'meta' => [
                 'current_page' => $articles->currentPage(),
                 'last_page'    => $articles->lastPage(),
@@ -73,22 +88,37 @@ class ArticleController extends Controller
     {
         $article = Article::with([
             'source:domain,political_lean,name',
-            'topic.articles:id,title,source_name,source_domain,url,topic_id',
+            'topic.articles' => fn ($q) => $q
+                ->select(['id', 'title', 'source_name', 'source_domain', 'url', 'topic_id'])
+                ->withCount(['likes', 'shares']),
             'topic.articles.source:domain,political_lean',
-        ])->findOrFail($id);
+        ])->withCount(['likes', 'shares'])
+          ->findOrFail($id);
 
-        if ($request->user()) {
+        $user = auth('sanctum')->user();
+
+        if ($user) {
             UserRead::updateOrCreate(
-                ['user_id' => $request->user()->id, 'article_id' => $article->id],
+                ['user_id' => $user->id, 'article_id' => $article->id],
                 ['read_at' => now()]
             );
         }
 
-        $liked = $request->user()
-            ? ArticleLike::where('user_id', $request->user()->id)->where('article_id', $article->id)->exists()
-            : false;
+        $liked  = $user ? ArticleLike::where('user_id', $user->id)->where('article_id', $article->id)->exists() : false;
+        $shared = $user ? ArticleShare::where('user_id', $user->id)->where('article_id', $article->id)->exists() : false;
 
-        return response()->json($this->formatArticle($article, full: true, liked: $liked));
+        // Liked/shared per coverage
+        $coverageIds = $article->topic?->articles->pluck('id') ?? collect();
+        $likedIds  = $user
+            ? ArticleLike::where('user_id', $user->id)->whereIn('article_id', $coverageIds)->pluck('article_id')->flip()
+            : collect();
+        $sharedIds = $user
+            ? ArticleShare::where('user_id', $user->id)->whereIn('article_id', $coverageIds)->pluck('article_id')->flip()
+            : collect();
+
+        return response()->json(
+            $this->formatArticle($article, full: true, liked: $liked, shared: $shared, likedIds: $likedIds, sharedIds: $sharedIds)
+        );
     }
 
     public function like(Request $request, int $id): JsonResponse
@@ -121,8 +151,35 @@ class ArticleController extends Controller
         return response()->json(['liked' => $liked, 'likes_count' => $count]);
     }
 
-    private function formatArticle(Article $article, bool $full = false, bool $liked = false, $likedIds = null): array
+    public function share(Request $request, int $id): JsonResponse
     {
+        Article::findOrFail($id); // 404 se non esiste
+        $user = $request->user();
+
+        $shared = false;
+        if ($user) {
+            $existing = ArticleShare::where('user_id', $user->id)->where('article_id', $id)->first();
+            if ($existing) {
+                $existing->delete();
+                $shared = false;
+            } else {
+                ArticleShare::create(['user_id' => $user->id, 'article_id' => $id]);
+                $shared = true;
+            }
+        }
+
+        $count = ArticleShare::where('article_id', $id)->count();
+        return response()->json(['shared' => $shared, 'shares_count' => $count]);
+    }
+
+    private function formatArticle(
+        Article $article,
+        bool $full = false,
+        bool $liked = false,
+        bool $shared = false,
+        $likedIds = null,
+        $sharedIds = null,
+    ): array {
         $coverage = [];
         if ($article->topic_id && $article->relationLoaded('topic') && $article->topic) {
             $coverage = $article->topic->articles
@@ -134,14 +191,17 @@ class ArticleController extends Controller
                     'source_domain'=> $a->source_domain,
                     'url'          => $a->url,
                     'lean'         => optional($a->source)->political_lean,
+                    'likes_count'  => $a->likes_count ?? 0,
+                    'shares_count' => $a->shares_count ?? 0,
+                    'liked'        => $likedIds?->has($a->id) ?? false,
+                    'shared'       => $sharedIds?->has($a->id) ?? false,
                 ])
                 ->values()
                 ->all();
         }
 
-        $isLiked = $likedIds !== null
-            ? $likedIds->has($article->id)
-            : $liked;
+        $isLiked  = $likedIds  !== null ? $likedIds->has($article->id)  : $liked;
+        $isShared = $sharedIds !== null ? $sharedIds->has($article->id) : $shared;
 
         $data = [
             'id'            => $article->id,
@@ -157,7 +217,9 @@ class ArticleController extends Controller
             'topic_id'      => $article->topic_id,
             'coverage'      => $coverage,
             'liked'         => $isLiked,
+            'shared'        => $isShared,
             'likes_count'   => $article->likes_count ?? 0,
+            'shares_count'  => $article->shares_count ?? 0,
         ];
 
         if ($full) {

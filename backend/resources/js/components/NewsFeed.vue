@@ -105,6 +105,7 @@
             :featured="true"
             @click="openArticle"
             @like="toggleLike"
+            @share="shareArticle"
           />
         </div>
 
@@ -125,6 +126,7 @@
               :compact="true"
               @click="openArticle"
               @like="toggleLike"
+              @share="shareArticle"
             />
           </template>
         </div>
@@ -157,7 +159,7 @@ const props = defineProps({
   adsenseFrequency:  { type: String, default: '6' },
 });
 
-const { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, toggleLike } = useArticles();
+const { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, toggleLike, shareArticle } = useArticles();
 const { user, isAuthenticated, logout } = useAuth();
 const userName = computed(() => user.value?.name ?? '');
 

@@ -101,11 +101,65 @@ class ArticlesNotifier extends StateNotifier<ArticlesState> {
       final res = await dio.post('/articles/$articleId/like');
       final liked      = res.data['liked'] as bool;
       final likesCount = res.data['likes_count'] as int;
-
       state = state.copyWith(
         articles: state.articles.map((a) {
           if (a.id == articleId) return a.copyWith(liked: liked, likesCount: likesCount);
           return a;
+        }).toList(),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> toggleShare(int articleId) async {
+    try {
+      final dio = _ref.read(dioProvider);
+      final res = await dio.post('/articles/$articleId/share');
+      final shared      = res.data['shared'] as bool;
+      final sharesCount = res.data['shares_count'] as int;
+      state = state.copyWith(
+        articles: state.articles.map((a) {
+          if (a.id == articleId) return a.copyWith(shared: shared, sharesCount: sharesCount);
+          return a;
+        }).toList(),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> toggleCoverageLike(int mainArticleId, int coverageArticleId) async {
+    try {
+      final dio = _ref.read(dioProvider);
+      final res = await dio.post('/articles/$coverageArticleId/like');
+      final liked      = res.data['liked'] as bool;
+      final likesCount = res.data['likes_count'] as int;
+      state = state.copyWith(
+        articles: state.articles.map((a) {
+          if (a.id != mainArticleId) return a;
+          return a.copyWith(
+            coverage: a.coverage.map((src) {
+              if (src.id != coverageArticleId) return src;
+              return src.copyWith(liked: liked, likesCount: likesCount);
+            }).toList(),
+          );
+        }).toList(),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> shareCoverageArticle(int mainArticleId, int coverageArticleId) async {
+    try {
+      final dio = _ref.read(dioProvider);
+      final res = await dio.post('/articles/$coverageArticleId/share');
+      final shared      = res.data['shared'] as bool;
+      final sharesCount = res.data['shares_count'] as int;
+      state = state.copyWith(
+        articles: state.articles.map((a) {
+          if (a.id != mainArticleId) return a;
+          return a.copyWith(
+            coverage: a.coverage.map((src) {
+              if (src.id != coverageArticleId) return src;
+              return src.copyWith(shared: shared, sharesCount: sharesCount);
+            }).toList(),
+          );
         }).toList(),
       );
     } catch (_) {}

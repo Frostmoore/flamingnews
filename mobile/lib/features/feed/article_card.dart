@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/models/article.dart';
+import '../../core/providers/articles_provider.dart';
 import '../../shared/widgets/lean_badge.dart';
 
 // ── Costanti orientamento ──────────────────────────────────────────────────
@@ -39,61 +40,89 @@ const _leanLabels = {
   'altro':         'Media neutri',
 };
 
-// ── ArticleCard ────────────────────────────────────────────────────────────
-class ArticleCard extends StatelessWidget {
+// ── ArticleCard (StatefulWidget per stato locale coverage) ─────────────────
+class ArticleCard extends StatefulWidget {
   final Article article;
   final VoidCallback onTap;
   final VoidCallback? onLike;
+  final VoidCallback? onShare;
+  final ArticlesNotifier? notifier;
 
   const ArticleCard({
     super.key,
     required this.article,
     required this.onTap,
     this.onLike,
+    this.onShare,
+    this.notifier,
   });
 
-  /// Coverage deduplicata per source_domain (esclude il dominio dell'articolo principale).
-  List<CoverageSource> get _uniqueCoverage {
-    final seen = <String?>{article.sourceDomain};
-    final result = <CoverageSource>[];
-    for (final src in article.coverage) {
-      if (!seen.contains(src.sourceDomain)) {
-        seen.add(src.sourceDomain);
-        result.add(src);
-      }
-    }
-    return result;
+  @override
+  State<ArticleCard> createState() => _ArticleCardState();
+}
+
+class _ArticleCardState extends State<ArticleCard> {
+  late List<CoverageSource> _uniqueCoverage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCoverage();
   }
 
-  /// Raggruppa la coverage deduplicata per orientamento.
-  Map<String, List<Map<String, dynamic>>> _byLean(List<CoverageSource> unique) {
-    final groups = {for (final l in _leanOrder) l: <Map<String, dynamic>>[]};
-    for (final src in unique) {
+  @override
+  void didUpdateWidget(ArticleCard old) {
+    super.didUpdateWidget(old);
+    if (old.article.coverage != widget.article.coverage) {
+      _initCoverage();
+    }
+  }
+
+  void _initCoverage() {
+    final seen = <String?>{widget.article.sourceDomain};
+    _uniqueCoverage = widget.article.coverage.where((src) {
+      if (seen.contains(src.sourceDomain)) return false;
+      seen.add(src.sourceDomain);
+      return true;
+    }).toList();
+  }
+
+  /// Raggruppa la coverage per orientamento.
+  Map<String, List<CoverageSource>> get _byLean {
+    final groups = {for (final l in _leanOrder) l: <CoverageSource>[]};
+    for (final src in _uniqueCoverage) {
       final l = src.lean ?? 'altro';
-      (groups[l] ??= []).add({
-        'id':          src.id,
-        'title':       src.title ?? '',
-        'source_name': src.sourceName,
-        'url':         src.url,
-      });
+      (groups[l] ??= []).add(src);
     }
     return groups;
   }
 
-  void _share() {
+  void _shareArticle(String title, String url) {
+    SharePlus.instance.share(ShareParams(subject: title, text: '$title\n$url'));
+    widget.onShare?.call();
+  }
+
+  void _toggleCoverageLike(CoverageSource src) async {
+    if (widget.notifier == null) return;
+    await widget.notifier!.toggleCoverageLike(widget.article.id, src.id);
+  }
+
+  void _shareCoverage(CoverageSource src) async {
     SharePlus.instance.share(ShareParams(
-      subject: article.title,
-      text: '${article.title}\n${article.url}',
+      subject: src.title ?? '',
+      text: '${src.title ?? ''}\n${src.url}',
     ));
+    if (widget.notifier == null) return;
+    await widget.notifier!.shareCoverageArticle(widget.article.id, src.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    final unique = _uniqueCoverage;
-    final hasCoverage = unique.isNotEmpty;
+    final article = widget.article;
+    final hasCoverage = _uniqueCoverage.isNotEmpty;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Card(
         elevation: 0,
         color: Colors.white,
@@ -158,7 +187,7 @@ class ArticleCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // Footer: categoria + like + share
+                  // Footer: categoria + like + share articolo principale
                   Row(
                     children: [
                       Text(
@@ -169,8 +198,9 @@ class ArticleCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
+                      // Like principale
                       GestureDetector(
-                        onTap: onLike,
+                        onTap: widget.onLike,
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -197,12 +227,32 @@ class ArticleCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // Share principale
                       GestureDetector(
-                        onTap: _share,
+                        onTap: () => _shareArticle(article.title, article.url),
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          child: Icon(Icons.share_outlined, size: 16, color: Colors.grey.shade400),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.share_outlined,
+                                size: 16,
+                                color: article.shared ? const Color(0xFFC41E3A) : Colors.grey.shade400,
+                              ),
+                              if (article.sharesCount > 0) ...[
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${article.sharesCount}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: article.shared ? const Color(0xFFC41E3A) : Colors.grey.shade400,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -214,7 +264,11 @@ class ArticleCard extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   if (hasCoverage)
-                    _CoverageSection(byLean: _byLean(unique))
+                    _CoverageSection(
+                      byLean: _byLean,
+                      onLike: _toggleCoverageLike,
+                      onShare: _shareCoverage,
+                    )
                   else
                     _SingleSourceSection(
                       lean: article.politicalLean,
@@ -226,7 +280,7 @@ class ArticleCard extends StatelessWidget {
 
             // ── Barra orientamenti (bordo inferiore) ────────────
             _CoverageBar(
-              uniqueCoverage: unique,
+              uniqueCoverage: _uniqueCoverage,
               selfLean: article.politicalLean,
             ),
           ],
@@ -238,9 +292,15 @@ class ArticleCard extends StatelessWidget {
 
 // ── Sezione multi-fonte ────────────────────────────────────────────────────
 class _CoverageSection extends StatelessWidget {
-  final Map<String, List<Map<String, dynamic>>> byLean;
+  final Map<String, List<CoverageSource>> byLean;
+  final void Function(CoverageSource) onLike;
+  final void Function(CoverageSource) onShare;
 
-  const _CoverageSection({required this.byLean});
+  const _CoverageSection({
+    required this.byLean,
+    required this.onLike,
+    required this.onShare,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +314,12 @@ class _CoverageSection extends StatelessWidget {
           style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black38, letterSpacing: 0.8),
         ),
         const SizedBox(height: 10),
-        ...activeLeans.map((lean) => _LeanGroup(lean: lean, sources: byLean[lean]!)),
+        ...activeLeans.map((lean) => _LeanGroup(
+          lean: lean,
+          sources: byLean[lean]!,
+          onLike: onLike,
+          onShare: onShare,
+        )),
       ],
     );
   }
@@ -263,9 +328,16 @@ class _CoverageSection extends StatelessWidget {
 // ── Gruppo per orientamento ────────────────────────────────────────────────
 class _LeanGroup extends StatelessWidget {
   final String lean;
-  final List<Map<String, dynamic>> sources;
+  final List<CoverageSource> sources;
+  final void Function(CoverageSource) onLike;
+  final void Function(CoverageSource) onShare;
 
-  const _LeanGroup({required this.lean, required this.sources});
+  const _LeanGroup({
+    required this.lean,
+    required this.sources,
+    required this.onLike,
+    required this.onShare,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +351,6 @@ class _LeanGroup extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header orientamento
           Row(
             children: [
               Container(
@@ -298,29 +369,38 @@ class _LeanGroup extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          // Lista titoli
-          ...sources.map((src) => _SourceRow(src: src, borderColor: borderColor)),
+          ...sources.map((src) => _SourceRow(
+            src: src,
+            borderColor: borderColor,
+            onLike: () => onLike(src),
+            onShare: () => onShare(src),
+          )),
         ],
       ),
     );
   }
 }
 
-// ── Riga singola fonte con titolo ─────────────────────────────────────────
+// ── Riga singola fonte con titolo + azioni ────────────────────────────────
 class _SourceRow extends StatelessWidget {
-  final Map<String, dynamic> src;
+  final CoverageSource src;
   final Color borderColor;
+  final VoidCallback onLike;
+  final VoidCallback onShare;
 
-  const _SourceRow({required this.src, required this.borderColor});
+  const _SourceRow({
+    required this.src,
+    required this.borderColor,
+    required this.onLike,
+    required this.onShare,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final url = src['url'] as String? ?? '';
-    final title = src['title'] as String? ?? '';
-    final sourceName = src['source_name'] as String? ?? '';
+    final url = src.url;
 
     final content = Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         padding: const EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
@@ -330,15 +410,69 @@ class _SourceRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              sourceName.toUpperCase(),
+              (src.sourceName ?? '').toUpperCase(),
               style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black45, letterSpacing: 0.5),
             ),
             const SizedBox(height: 2),
             Text(
-              title,
+              src.title ?? '',
               style: const TextStyle(fontSize: 12, color: Color(0xFF1A1A1A), height: 1.3),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            // Azioni coverage
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: onLike,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12, top: 2, bottom: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          src.liked ? Icons.favorite : Icons.favorite_border,
+                          size: 13,
+                          color: src.liked ? const Color(0xFFC41E3A) : Colors.grey.shade400,
+                        ),
+                        if (src.likesCount > 0) ...[
+                          const SizedBox(width: 3),
+                          Text(
+                            '${src.likesCount}',
+                            style: TextStyle(fontSize: 10, color: src.liked ? const Color(0xFFC41E3A) : Colors.grey.shade400),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: onShare,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.share_outlined,
+                          size: 13,
+                          color: src.shared ? const Color(0xFFC41E3A) : Colors.grey.shade400,
+                        ),
+                        if (src.sharesCount > 0) ...[
+                          const SizedBox(width: 3),
+                          Text(
+                            '${src.sharesCount}',
+                            style: TextStyle(fontSize: 10, color: src.shared ? const Color(0xFFC41E3A) : Colors.grey.shade400),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -394,7 +528,6 @@ class _CoverageBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Conta una sola volta per testata (già deduplicata)
     final counts = <String, int>{};
     if (selfLean != null) counts[selfLean!] = 1;
     for (final src in uniqueCoverage) {
@@ -402,10 +535,7 @@ class _CoverageBar extends StatelessWidget {
       counts[l] = (counts[l] ?? 0) + 1;
     }
 
-    final segments = _leanOrder
-        .where((l) => (counts[l] ?? 0) > 0)
-        .toList();
-
+    final segments = _leanOrder.where((l) => (counts[l] ?? 0) > 0).toList();
     if (segments.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(

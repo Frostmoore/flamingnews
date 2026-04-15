@@ -64,6 +64,16 @@ export function useArticles() {
         }
     }
 
+    async function shareArticle(article) {
+        try {
+            const res = await axios.post(`/api/articles/${article.id}/share`);
+            article.shared        = res.data.shared;
+            article.shares_count  = res.data.shares_count;
+        } catch (e) {
+            // silenzioso
+        }
+    }
+
     async function fetchArticle(id) {
         loading.value = true;
         error.value = null;
@@ -78,5 +88,5 @@ export function useArticles() {
         }
     }
 
-    return { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, fetchArticle, toggleLike };
+    return { articles, meta, loading, loadingMore, hasMore, error, fetchArticles, fetchArticle, toggleLike, shareArticle };
 }

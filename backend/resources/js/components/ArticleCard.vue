@@ -44,13 +44,13 @@
           {{ decodeHtml(article.description) }}
         </p>
 
-        <!-- Footer: categoria + azioni -->
+        <!-- Footer: categoria + azioni articolo principale -->
         <div class="flex items-center justify-between gap-2 mb-3">
           <span class="text-xs text-[#C41E3A] font-semibold uppercase tracking-wider">
             {{ article.category }}
           </span>
           <div class="flex items-center gap-3" @click.stop>
-            <!-- Like -->
+            <!-- Like articolo principale -->
             <button
               @click="$emit('like', article)"
               class="flex items-center gap-1 text-xs transition-colors"
@@ -61,11 +61,16 @@
               </svg>
               <span v-if="article.likes_count > 0">{{ article.likes_count }}</span>
             </button>
-            <!-- Condividi -->
-            <button @click="share" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <!-- Condividi articolo principale -->
+            <button
+              @click="shareMain"
+              class="flex items-center gap-1 text-xs transition-colors"
+              :class="article.shared ? 'text-[#C41E3A]' : 'text-gray-400 hover:text-gray-600'"
+            >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
+              <span v-if="article.shares_count > 0">{{ article.shares_count }}</span>
             </button>
           </div>
         </div>
@@ -92,20 +97,48 @@
                   </span>
                 </div>
 
-                <!-- Lista: una riga per ogni giornale con il suo titolo -->
+                <!-- Lista: una riga per ogni giornale con il suo titolo + azioni -->
                 <ul class="space-y-2">
                   <li v-for="src in byLean[lean]" :key="src.id">
-                    <a
-                      :href="src.url"
-                      target="_blank"
-                      rel="noopener"
-                      @click.stop
-                      class="group block pl-3 hover:bg-gray-50 rounded-r transition-colors"
+                    <div
+                      class="pl-3"
                       :style="{ borderLeft: '2px solid ' + leanBorderHex(lean) }"
                     >
-                      <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wide mb-0.5">{{ src.source_name }}</span>
-                      <span class="text-xs text-gray-700 group-hover:text-[#C41E3A] leading-snug line-clamp-2 block">{{ src.title }}</span>
-                    </a>
+                      <!-- Titolo cliccabile → apre il sito -->
+                      <a
+                        :href="src.url"
+                        target="_blank"
+                        rel="noopener"
+                        @click.stop
+                        class="group block hover:bg-gray-50 rounded-r transition-colors"
+                      >
+                        <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wide mb-0.5">{{ src.source_name }}</span>
+                        <span class="text-xs text-gray-700 group-hover:text-[#C41E3A] leading-snug line-clamp-2 block">{{ src.title }}</span>
+                      </a>
+                      <!-- Azioni FUORI dall'<a> → nessun conflitto di navigazione -->
+                      <div class="flex items-center gap-3 mt-1" @click.stop>
+                        <button
+                          @click="toggleCoverageLike(src)"
+                          class="flex items-center gap-1 text-xs transition-colors"
+                          :class="src.liked ? 'text-[#C41E3A]' : 'text-gray-300 hover:text-[#C41E3A]'"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 pointer-events-none" :fill="src.liked ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                          <span v-if="src.likes_count > 0">{{ src.likes_count }}</span>
+                        </button>
+                        <button
+                          @click="shareCoverageArticle(src)"
+                          class="flex items-center gap-1 text-xs transition-colors"
+                          :class="src.shared ? 'text-[#C41E3A]' : 'text-gray-300 hover:text-gray-500'"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                          </svg>
+                          <span v-if="src.shares_count > 0">{{ src.shares_count }}</span>
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 </ul>
 
@@ -113,7 +146,7 @@
             </template>
           </template>
 
-          <!-- Fonte singola: mostra orientamento del giornale chiaramente -->
+          <!-- Fonte singola -->
           <div v-else class="flex flex-col gap-1.5">
             <p class="text-xs text-gray-400">Solo questa testata ha pubblicato la notizia</p>
             <div class="flex items-center gap-2">
@@ -129,7 +162,7 @@
         </div>
       </div>
 
-      <!-- Spacer: cresce tra coverage e barra, non sotto il titolo -->
+      <!-- Spacer -->
       <div class="flex-1"></div>
 
       <!-- ── Barra orientamenti ── -->
@@ -148,6 +181,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
   article: { type: Object, required: true },
@@ -155,9 +189,7 @@ const props = defineProps({
   featured: { type: Boolean, default: false },
 });
 
-defineEmits(['click', 'like']);
-
-const showLeanDetail = ref(false);
+const emit = defineEmits(['click', 'like', 'share']);
 
 // Decode HTML entities senza v-html (sicuro, no XSS)
 function decodeHtml(str) {
@@ -186,21 +218,7 @@ const formattedDate = computed(() => {
     .format(new Date(props.article.published_at));
 });
 
-// ── Coverage ──────────────────────────────────────────
-const hasCoverage = computed(() => uniqueCoverage.value.length > 0);
-
-// ── Colori per lean (usati in più posti) ──────────────
-const leanHex = {
-  left:          '#1D4ED8', // blu scuro
-  'center-left': '#60A5FA', // blu chiaro
-  center:        '#6B7280', // grigio
-  'center-right':'#FB923C', // arancione
-  right:         '#DC2626', // rosso
-  international: '#D97706', // ambra
-  altro:         '#7C3AED', // viola
-};
-
-// Deduplica coverage: una sola voce per testata (source_domain)
+// ── Coverage deduplicata ──────────────────────────────
 const uniqueCoverage = computed(() => {
   const seen = new Set([props.article.source_domain]);
   return (props.article.coverage ?? []).filter(src => {
@@ -210,10 +228,34 @@ const uniqueCoverage = computed(() => {
   });
 });
 
+// Copia reattiva locale dei coverage items (per aggiornare like/share senza mutare props)
+const coverageItems = ref([]);
+const initCoverage = () => {
+  coverageItems.value = uniqueCoverage.value.map(src => ({ ...src }));
+};
+initCoverage();
+
+// Quando la prop cambia (nuova fetch), reinizializza
+import { watch } from 'vue';
+watch(() => props.article.coverage, initCoverage, { deep: true });
+
+const hasCoverage = computed(() => coverageItems.value.length > 0);
+
+// ── Colori per lean ──────────────────────────────────
+const leanHex = {
+  left:          '#1D4ED8',
+  'center-left': '#60A5FA',
+  center:        '#6B7280',
+  'center-right':'#FB923C',
+  right:         '#DC2626',
+  international: '#D97706',
+  altro:         '#7C3AED',
+};
+
 // Raggruppa la coverage per orientamento
 const byLean = computed(() => {
   const groups = { left: [], 'center-left': [], center: [], 'center-right': [], right: [], international: [], altro: [] };
-  uniqueCoverage.value.forEach(src => {
+  coverageItems.value.forEach(src => {
     const l = src.lean ?? 'altro';
     (groups[l] ?? groups.altro).push(src);
   });
@@ -225,7 +267,7 @@ const leanBarCounts = computed(() => {
   const counts = { left: 0, 'center-left': 0, center: 0, 'center-right': 0, right: 0, international: 0, altro: 0 };
   const mainLean = props.article.political_lean ?? 'altro';
   if (mainLean in counts) counts[mainLean] = 1; else counts.altro = 1;
-  uniqueCoverage.value.forEach(src => {
+  coverageItems.value.forEach(src => {
     const l = src.lean ?? 'altro';
     if (l in counts) counts[l]++; else counts.altro++;
   });
@@ -246,7 +288,6 @@ const leanLabelMap = {
 };
 function leanLabelFull(lean) { return leanLabelMap[lean] ?? lean; }
 
-// Classi Tailwind per badge colorato (sfondo pieno) — usate solo dove non serve hex diretto
 const leanBgMap = {
   left:          'bg-blue-700',
   'center-left': 'bg-blue-400',
@@ -257,16 +298,41 @@ const leanBgMap = {
   altro:         'bg-purple-500',
 };
 function leanBgClass(lean) { return leanBgMap[lean] ?? 'bg-gray-400'; }
-
-// Colore bordo sinistro per i titoli (hex diretto)
 function leanBorderHex(lean) { return leanHex[lean] ?? '#D1D5DB'; }
 
-// ── Condividi ─────────────────────────────────────────
-function share() {
+// ── Azioni articolo principale ────────────────────────
+async function shareMain() {
+  // Apri share dialog nativo
   if (navigator.share) {
     navigator.share({ title: props.article.title, url: props.article.url }).catch(() => {});
   } else {
     navigator.clipboard?.writeText(props.article.url).then(() => alert('Link copiato!'));
   }
+  // Traccia sul backend e aggiorna contatore via emit al parent
+  emit('share', props.article);
+}
+
+// ── Azioni coverage (gestite localmente) ─────────────
+async function toggleCoverageLike(src) {
+  try {
+    const res = await axios.post(`/api/articles/${src.id}/like`);
+    src.liked       = res.data.liked;
+    src.likes_count = res.data.likes_count;
+  } catch (e) { /* non autenticato o errore silenzioso */ }
+}
+
+async function shareCoverageArticle(src) {
+  // Apri share dialog
+  if (navigator.share) {
+    navigator.share({ title: src.title, url: src.url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(src.url).then(() => alert('Link copiato!'));
+  }
+  // Traccia
+  try {
+    const res = await axios.post(`/api/articles/${src.id}/share`);
+    src.shared        = res.data.shared;
+    src.shares_count  = res.data.shares_count;
+  } catch (e) { /* silenzioso */ }
 }
 </script>

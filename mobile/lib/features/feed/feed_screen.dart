@@ -318,6 +318,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               final article = state.articles[articleIndex];
               return ArticleCard(
                 article: article,
+                notifier: ref.read(articlesProvider.notifier),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -327,7 +328,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     ),
                   ),
                 ),
-                onLike: () => ref.read(articlesProvider.notifier).toggleLike(article.id),
+                onLike:  () => ref.read(articlesProvider.notifier).toggleLike(article.id),
+                onShare: () => ref.read(articlesProvider.notifier).toggleShare(article.id),
               );
             },
           ),

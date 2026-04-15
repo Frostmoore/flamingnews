@@ -28,9 +28,10 @@ Route::prefix('auth')->group(function () {
 });
 
 // Articoli (pubblico con letture tracciate se autenticato)
-Route::get('/articles',      [ArticleController::class, 'index']);
+Route::get('/articles',      [ArticleController::class, 'index'])->middleware('auth:sanctum')->withoutMiddleware('auth:sanctum');
 Route::get('/articles/{id}', [ArticleController::class, 'show'])->middleware('auth:sanctum')->withoutMiddleware('auth:sanctum');
-Route::post('/articles/{id}/like', [ArticleController::class, 'like'])->middleware('auth:sanctum');
+Route::post('/articles/{id}/like',  [ArticleController::class, 'like'])->middleware('auth:sanctum');
+Route::post('/articles/{id}/share', [ArticleController::class, 'share']);
 
 // Prime pagine (pubblico)
 Route::get('/prima-pagine', [PrimePagineController::class, 'index']);

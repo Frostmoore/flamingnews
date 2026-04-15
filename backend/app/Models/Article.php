@@ -49,6 +49,11 @@ class Article extends Model
         return $this->hasMany(ArticleLike::class);
     }
 
+    public function shares()
+    {
+        return $this->hasMany(ArticleShare::class);
+    }
+
     /**
      * Returns first 3 sentences of content for AI analysis input.
      */

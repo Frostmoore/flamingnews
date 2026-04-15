@@ -5,6 +5,10 @@ class CoverageSource {
   final String? sourceDomain;
   final String url;
   final String? lean;
+  final int likesCount;
+  final int sharesCount;
+  final bool liked;
+  final bool shared;
 
   const CoverageSource({
     required this.id,
@@ -13,7 +17,25 @@ class CoverageSource {
     this.sourceDomain,
     required this.url,
     this.lean,
+    this.likesCount = 0,
+    this.sharesCount = 0,
+    this.liked = false,
+    this.shared = false,
   });
+
+  CoverageSource copyWith({bool? liked, int? likesCount, bool? shared, int? sharesCount}) =>
+      CoverageSource(
+        id:           id,
+        title:        title,
+        sourceName:   sourceName,
+        sourceDomain: sourceDomain,
+        url:          url,
+        lean:         lean,
+        likesCount:   likesCount  ?? this.likesCount,
+        sharesCount:  sharesCount ?? this.sharesCount,
+        liked:        liked       ?? this.liked,
+        shared:       shared      ?? this.shared,
+      );
 
   factory CoverageSource.fromJson(Map<String, dynamic> json) {
     return CoverageSource(
@@ -23,6 +45,10 @@ class CoverageSource {
       sourceDomain: json['source_domain'] as String?,
       url:          json['url'] as String,
       lean:         json['lean'] as String?,
+      likesCount:   json['likes_count']  as int? ?? 0,
+      sharesCount:  json['shares_count'] as int? ?? 0,
+      liked:        json['liked']  as bool? ?? false,
+      shared:       json['shared'] as bool? ?? false,
     );
   }
 }
@@ -44,6 +70,8 @@ class Article {
   final List<CoverageSource> coverage;
   final bool liked;
   final int likesCount;
+  final bool shared;
+  final int sharesCount;
 
   const Article({
     required this.id,
@@ -62,9 +90,17 @@ class Article {
     this.coverage = const [],
     this.liked = false,
     this.likesCount = 0,
+    this.shared = false,
+    this.sharesCount = 0,
   });
 
-  Article copyWith({bool? liked, int? likesCount}) => Article(
+  Article copyWith({
+    bool? liked,
+    int? likesCount,
+    bool? shared,
+    int? sharesCount,
+    List<CoverageSource>? coverage,
+  }) => Article(
         id: id,
         title: title,
         description: description,
@@ -78,9 +114,11 @@ class Article {
         category: category,
         politicalLean: politicalLean,
         topicId: topicId,
-        coverage: coverage,
-        liked: liked ?? this.liked,
-        likesCount: likesCount ?? this.likesCount,
+        coverage:    coverage    ?? this.coverage,
+        liked:       liked       ?? this.liked,
+        likesCount:  likesCount  ?? this.likesCount,
+        shared:      shared      ?? this.shared,
+        sharesCount: sharesCount ?? this.sharesCount,
       );
 
   factory Article.fromJson(Map<String, dynamic> json) {
@@ -103,8 +141,10 @@ class Article {
       coverage:     (json['coverage'] as List<dynamic>?)
           ?.map((e) => CoverageSource.fromJson(e as Map<String, dynamic>))
           .toList() ?? [],
-      liked:      json['liked'] as bool? ?? false,
-      likesCount: json['likes_count'] as int? ?? 0,
+      liked:       json['liked']         as bool? ?? false,
+      likesCount:  json['likes_count']   as int?  ?? 0,
+      shared:      json['shared']        as bool? ?? false,
+      sharesCount: json['shares_count']  as int?  ?? 0,
     );
   }
 }
