@@ -11,7 +11,7 @@
         <a href="/" class="text-xs text-gray-400 hover:text-[#C41E3A] transition-colors uppercase tracking-widest">← Feed</a>
       </div>
 
-      <!-- Filtro categorie — pill style -->
+      <!-- Filtro categorie -->
       <div class="bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-4">
           <div class="flex overflow-x-auto py-2 gap-2" style="scrollbar-width:none">
@@ -23,6 +23,23 @@
                 ? 'bg-[#C41E3A] text-white shadow-md shadow-[#C41E3A]/30'
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-[#1A1A1A]'"
             >{{ cat.label }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtro periodo -->
+      <div class="bg-white/70 backdrop-blur-md border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4">
+          <div class="flex overflow-x-auto py-1.5 gap-1.5 items-center" style="scrollbar-width:none">
+            <span class="flex-shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-300 mr-1">Periodo</span>
+            <button
+              v-for="p in periods" :key="p.value ?? 'all'"
+              @click="selectPeriod(p.value)"
+              class="flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all duration-200"
+              :class="activePeriod === p.value
+                ? 'bg-[#1A1A1A] text-white'
+                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-[#1A1A1A]'"
+            >{{ p.label }}</button>
           </div>
         </div>
       </div>
@@ -47,9 +64,9 @@
       <!-- ── Totali ───────────────────────────────────────────────────────── -->
       <section class="grid grid-cols-3 sm:grid-cols-6 gap-3">
         <div v-for="s in totalsCards" :key="s.label"
-             class="bg-white rounded-2xl p-5 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+             class="bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div class="font-display font-bold leading-none"
-               :class="s.accent ? 'text-[#C41E3A] text-3xl' : 'text-[#1A1A1A] text-2xl'">{{ s.value }}</div>
+               :class="s.accent ? 'text-[#C41E3A] text-2xl sm:text-3xl' : 'text-[#1A1A1A] text-xl sm:text-2xl'">{{ s.value }}</div>
           <div class="text-[10px] text-gray-400 uppercase tracking-widest mt-2">{{ s.label }}</div>
         </div>
       </section>
@@ -57,53 +74,22 @@
       <!-- ── Testate ──────────────────────────────────────────────────────── -->
       <section>
         <SectionTitle>Testate</SectionTitle>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-          <StackedRank title="Più produttive"
-            :rows="top(data.sources.by_articles, 10)"
-            name-key="source_name" value-key="articles_count" suffix="art."
-            :clickable="true" @item-click="openSourceModal" />
-          <StackedRank title="Più cliccate"
-            :rows="top(data.sources.by_clicks, 10)"
-            name-key="source_name" value-key="clicks_count" suffix="click"
-            empty="Nessun click ancora"
-            :clickable="true" @item-click="openSourceModal" />
-          <StackedRank title="Più piaciute"
-            :rows="top(data.sources.by_likes, 10)"
-            name-key="source_name" value-key="likes_count" suffix="like"
-            empty="Nessun like ancora"
-            :clickable="true" @item-click="openSourceModal" />
-          <StackedRank title="Più condivise"
-            :rows="top(data.sources.by_shares, 10)"
-            name-key="source_name" value-key="shares_count" suffix="share"
-            empty="Nessun share ancora"
-            :clickable="true" @item-click="openSourceModal" />
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StackedRank v-for="col in sourceCols" :key="col.title"
+            :title="col.title" :rows="top(col.rows, 10)"
+            :name-key="col.nameKey" :value-key="col.valueKey" :suffix="col.suffix"
+            :empty="col.empty" :clickable="true" @item-click="openSourceModal" />
         </div>
       </section>
 
       <!-- ── Articoli ─────────────────────────────────────────────────────── -->
       <section>
         <SectionTitle>Articoli</SectionTitle>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-          <StackedRank title="Più coperti"
-            :rows="top(data.articles.top_covered, 10)"
-            name-key="title" value-key="coverage_count" suffix="testate"
-            :long-name="true" empty="Nessun topic ancora"
-            :clickable="true" @item-click="openCoverageModal" />
-          <StackedRank title="Più cliccati"
-            :rows="top(data.articles.top_clicked, 10)"
-            name-key="title" value-key="clicks_count" suffix="click"
-            :long-name="true" empty="Nessun click ancora"
-            :clickable="true" @item-click="openCoverageModal" />
-          <StackedRank title="Più piaciuti"
-            :rows="top(data.articles.top_liked, 10)"
-            name-key="title" value-key="likes_count" suffix="like"
-            :long-name="true" empty="Nessun like ancora"
-            :clickable="true" @item-click="openCoverageModal" />
-          <StackedRank title="Più condivisi"
-            :rows="top(data.articles.top_shared, 10)"
-            name-key="title" value-key="shares_count" suffix="share"
-            :long-name="true" empty="Nessun share ancora"
-            :clickable="true" @item-click="openCoverageModal" />
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StackedRank v-for="col in articleCols" :key="col.title"
+            :title="col.title" :rows="top(col.rows, 10)"
+            :name-key="col.nameKey" :value-key="col.valueKey" :suffix="col.suffix"
+            :long-name="true" :empty="col.empty" :clickable="true" @item-click="openCoverageModal" />
         </div>
       </section>
 
@@ -124,17 +110,17 @@
           </div>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-6">
-          <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="grid sm:grid-cols-2 gap-6">
+          <div class="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
             <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-5">Articoli pubblicati</p>
             <div class="space-y-4">
               <div v-for="row in data.political_lean.by_articles" :key="row.political_lean">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full shadow-sm" :style="{ background: leanColor(row.political_lean) }"></span>
+                    <span class="w-3 h-3 rounded-full shadow-sm flex-shrink-0" :style="{ background: leanColor(row.political_lean) }"></span>
                     <span class="text-sm font-medium text-[#1A1A1A]">{{ leanLabel(row.political_lean) }}</span>
                   </div>
-                  <span class="text-sm font-bold text-[#1A1A1A]">{{ fmtN(row.articles_count) }}</span>
+                  <span class="text-sm font-bold text-[#1A1A1A] ml-2 flex-shrink-0">{{ fmtN(row.articles_count) }}</span>
                 </div>
                 <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div class="h-full rounded-full transition-all duration-700"
@@ -143,16 +129,16 @@
               </div>
             </div>
           </div>
-          <div class="bg-white rounded-2xl shadow-sm p-6">
+          <div class="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
             <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-5">Like rate (like per articolo)</p>
             <div class="space-y-4">
               <div v-for="row in data.political_lean.like_rate" :key="row.political_lean">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full shadow-sm" :style="{ background: leanColor(row.political_lean) }"></span>
+                    <span class="w-3 h-3 rounded-full shadow-sm flex-shrink-0" :style="{ background: leanColor(row.political_lean) }"></span>
                     <span class="text-sm font-medium text-[#1A1A1A]">{{ leanLabel(row.political_lean) }}</span>
                   </div>
-                  <span class="text-sm font-bold text-[#C41E3A]">{{ row.like_rate }}</span>
+                  <span class="text-sm font-bold text-[#C41E3A] ml-2 flex-shrink-0">{{ row.like_rate }}</span>
                 </div>
                 <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div class="h-full rounded-full transition-all duration-700"
@@ -167,7 +153,7 @@
       <!-- ── Categorie ──────────────────────────────────────────────────────── -->
       <section v-if="!activeCategory">
         <SectionTitle>Categorie</SectionTitle>
-        <div class="mt-6 bg-white rounded-2xl shadow-sm p-6">
+        <div class="mt-6 bg-white rounded-2xl shadow-sm p-5 sm:p-6">
           <div class="space-y-3.5">
             <div v-for="(row, i) in top(data.categories.by_articles, 12)" :key="i">
               <div class="flex items-center justify-between mb-1.5">
@@ -193,6 +179,7 @@
               Questa pagina mostra solo i top 10. L'endpoint
               <code class="bg-gray-100 px-1.5 py-0.5 rounded-md text-xs font-mono">GET /api/analytics</code>
               accetta <code class="bg-gray-100 px-1.5 py-0.5 rounded-md text-xs font-mono">?category=</code>
+              e <code class="bg-gray-100 px-1.5 py-0.5 rounded-md text-xs font-mono">?period=</code>
               e restituisce top 50 per ogni metrica.
             </p>
           </div>
@@ -240,7 +227,6 @@
 
           <!-- Contenuto: testata -->
           <div v-else-if="modal.type === 'source' && modal.data" class="overflow-y-auto p-5 space-y-5">
-            <!-- Domain + orientamento -->
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs font-mono text-gray-400">{{ modal.data.source?.domain }}</span>
               <span v-if="modal.data.source?.political_lean"
@@ -249,8 +235,6 @@
                 {{ leanLabel(modal.data.source.political_lean) }}
               </span>
             </div>
-
-            <!-- Totali -->
             <div class="grid grid-cols-4 gap-2">
               <div v-for="s in sourceModalCards" :key="s.label"
                    class="bg-gray-50 rounded-xl p-3 text-center">
@@ -258,8 +242,6 @@
                 <div class="text-[9px] text-gray-400 uppercase tracking-wider mt-1">{{ s.label }}</div>
               </div>
             </div>
-
-            <!-- Top articoli -->
             <div v-if="modal.data.top_articles?.length">
               <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Articoli più cliccati</p>
               <div class="space-y-1.5">
@@ -281,8 +263,6 @@
                 </a>
               </div>
             </div>
-
-            <!-- Per categoria -->
             <div v-if="modal.data.by_category?.length">
               <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Per categoria</p>
               <div class="space-y-2">
@@ -365,28 +345,28 @@ const StackedRank = defineComponent({
   },
   emits: ['itemClick'],
   setup(props, { emit }) {
-    const activeIdx = ref(0);
+    const activeIdx    = ref(0);
+    const touchStartY  = ref(0);
+    const touchStartIdx = ref(0);
 
     return () => {
-      const rows   = props.rows ?? [];
-      const n      = rows.length;
-      const SLOT_H = props.longName ? 80 : 68; // px per slot
-      const VISIBLE = 5;                        // quante card nel "finestrino"
-      const winH   = SLOT_H * VISIBLE;
+      const rows    = props.rows ?? [];
+      const n       = rows.length;
+      const SLOT_H  = props.longName ? 80 : 68;
+      const VISIBLE = 5;
+      const winH    = SLOT_H * VISIBLE;
 
       if (!n) return h('div', {}, [
         h('p', { style: { fontSize:'10px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.1em', color:'#9ca3af', marginBottom:'12px' } }, props.title),
         h('p', { style: { fontSize:'12px', color:'#9ca3af', fontStyle:'italic', textAlign:'center', paddingTop:'20px' } }, props.empty),
       ]);
 
-      // Il tamburo scorre in modo che la card attiva sia centrata nel finestrino
-      const centerOffset = Math.floor(VISIBLE / 2); // 2
+      const centerOffset = Math.floor(VISIBLE / 2);
       const translateY   = -((activeIdx.value - centerOffset) * SLOT_H);
 
       const cards = rows.map((row, i) => {
         const dist     = Math.abs(i - activeIdx.value);
         const isActive = i === activeIdx.value;
-        // Larghezza: 100% per la card attiva, si restringe per le altre
         const width    = Math.max(76, 100 - dist * 8);
         const left     = ((100 - width) / 2).toFixed(1);
         const opacity  = Math.max(0.35, 1 - dist * 0.18);
@@ -397,7 +377,8 @@ const StackedRank = defineComponent({
         return h('div', {
           key: i,
           style: { height: SLOT_H + 'px', display: 'flex', alignItems: 'center', cursor: props.clickable ? 'pointer' : 'default' },
-          onMouseenter: () => { activeIdx.value = i; },
+          onMouseenter:  () => { activeIdx.value = i; },
+          onTouchstart:  () => { activeIdx.value = i; },
           onClick: props.clickable ? () => emit('itemClick', row) : undefined,
         }, [
           h('div', {
@@ -426,17 +407,25 @@ const StackedRank = defineComponent({
 
       return h('div', {}, [
         h('p', { style: { fontSize:'10px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.1em', color:'#9ca3af', marginBottom:'12px' } }, props.title),
-        // Finestrino con gradient mask per effetto cilindro
         h('div', {
           style: {
             height:              winH + 'px',
             overflow:            'hidden',
             position:            'relative',
+            touchAction:         'none',
             WebkitMaskImage:     'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)',
             maskImage:           'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)',
           },
+          onTouchstart: (e) => {
+            touchStartY.value   = e.touches[0].clientY;
+            touchStartIdx.value = activeIdx.value;
+          },
+          onTouchmove: (e) => {
+            const delta = e.touches[0].clientY - touchStartY.value;
+            const steps = Math.round(-delta / (SLOT_H * 0.6));
+            activeIdx.value = Math.max(0, Math.min(n - 1, touchStartIdx.value + steps));
+          },
         }, [
-          // Tamburo scorrevole
           h('div', {
             style: {
               transform:  `translateY(${translateY}px)`,
@@ -495,6 +484,7 @@ const data           = ref(null);
 const loading        = ref(true);
 const error          = ref(false);
 const activeCategory = ref(null);
+const activePeriod   = ref(null);
 
 const categories = [
   { value: null,         label: 'Tutte' },
@@ -512,6 +502,31 @@ const categories = [
   { value: 'cibo',       label: 'Cibo' },
   { value: 'viaggi',     label: 'Viaggi' },
 ];
+
+const periods = [
+  { value: null,      label: 'Sempre' },
+  { value: 'day',     label: 'Oggi' },
+  { value: 'week',    label: 'Settimana' },
+  { value: 'month',   label: 'Mese' },
+  { value: 'quarter', label: 'Trimestre' },
+  { value: 'year',    label: 'Anno' },
+];
+
+// ── Computed column configs ───────────────────────────────────────────────────
+
+const sourceCols = computed(() => [
+  { title: 'Più produttive', rows: data.value?.sources.by_articles,  nameKey: 'source_name', valueKey: 'articles_count', suffix: 'art.',   empty: 'Nessun dato' },
+  { title: 'Più cliccate',   rows: data.value?.sources.by_clicks,    nameKey: 'source_name', valueKey: 'clicks_count',   suffix: 'click',  empty: 'Nessun click ancora' },
+  { title: 'Più piaciute',   rows: data.value?.sources.by_likes,     nameKey: 'source_name', valueKey: 'likes_count',    suffix: 'like',   empty: 'Nessun like ancora' },
+  { title: 'Più condivise',  rows: data.value?.sources.by_shares,    nameKey: 'source_name', valueKey: 'shares_count',   suffix: 'share',  empty: 'Nessun share ancora' },
+]);
+
+const articleCols = computed(() => [
+  { title: 'Più coperti',   rows: data.value?.articles.top_covered, nameKey: 'title', valueKey: 'coverage_count', suffix: 'testate', empty: 'Nessun topic ancora' },
+  { title: 'Più cliccati',  rows: data.value?.articles.top_clicked, nameKey: 'title', valueKey: 'clicks_count',   suffix: 'click',   empty: 'Nessun click ancora' },
+  { title: 'Più piaciuti',  rows: data.value?.articles.top_liked,   nameKey: 'title', valueKey: 'likes_count',    suffix: 'like',    empty: 'Nessun like ancora' },
+  { title: 'Più condivisi', rows: data.value?.articles.top_shared,  nameKey: 'title', valueKey: 'shares_count',   suffix: 'share',   empty: 'Nessun share ancora' },
+]);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -560,9 +575,11 @@ async function load() {
   loading.value = true;
   error.value   = false;
   try {
-    const params = activeCategory.value ? { category: activeCategory.value } : {};
-    const res    = await axios.get('/api/analytics', { params });
-    data.value   = res.data;
+    const params = {};
+    if (activeCategory.value) params.category = activeCategory.value;
+    if (activePeriod.value)   params.period   = activePeriod.value;
+    const res  = await axios.get('/api/analytics', { params });
+    data.value = res.data;
   } catch {
     error.value = true;
   } finally {
@@ -570,10 +587,8 @@ async function load() {
   }
 }
 
-function selectCategory(val) {
-  activeCategory.value = val;
-  load();
-}
+function selectCategory(val) { activeCategory.value = val; load(); }
+function selectPeriod(val)   { activePeriod.value   = val; load(); }
 
 onMounted(load);
 </script>
