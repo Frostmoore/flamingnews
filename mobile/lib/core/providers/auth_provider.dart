@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../api/api_client.dart';
@@ -50,11 +51,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Login email/password
   // ---------------------------------------------------------------------------
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String login, String password) async {
     state = state.copyWith(loading: true, error: null);
     try {
       final dio = _ref.read(dioProvider);
-      final response = await dio.post('/auth/login', data: {'email': email, 'password': password});
+      final response = await dio.post('/auth/login', data: {'login': login, 'password': password});
       final data = response.data as Map<String, dynamic>;
       await saveAuthToken(data['token'] as String);
       state = state.copyWith(
@@ -63,7 +64,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return true;
     } catch (e) {
-      state = state.copyWith(loading: false, error: 'Credenziali non valide.');
+      String msg = 'Credenziali non valide.';
+      if (e is DioException) {
+        final body = e.response?.data;
+        if (body is Map && body['message'] != null) msg = body['message'] as String;
+      }
+      state = state.copyWith(loading: false, error: msg);
       return false;
     }
   }
@@ -72,21 +78,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Registrazione email/password + categorie
   // ---------------------------------------------------------------------------
 
-  Future<bool> register(
-    String name,
-    String email,
-    String password,
-    List<String> preferredCategories,
-  ) async {
+  Future<bool> register({
+    required String name,
+    required String username,
+    required String email,
+    required String password,
+    required List<String> preferredSources,
+  }) async {
     state = state.copyWith(loading: true, error: null);
     try {
       final dio = _ref.read(dioProvider);
       final response = await dio.post('/auth/register', data: {
-        'name': name,
-        'email': email,
-        'password': password,
+        'name':               name,
+        'username':           username,
+        'email':              email,
+        'password':           password,
         'password_confirmation': password,
-        'preferred_categories': preferredCategories,
+        'preferred_sources':  preferredSources,
       });
       final data = response.data as Map<String, dynamic>;
       await saveAuthToken(data['token'] as String);
@@ -153,6 +161,99 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return true;
     } catch (e) {
       state = state.copyWith(loading: false, error: 'Errore nel salvataggio delle categorie.');
+      return false;
+    }
+  }
+
+  Future<bool> forgotPassword(String email) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final dio = _ref.read(dioProvider);
+      await dio.post('/auth/forgot-password', data: {'email': email});
+      state = state.copyWith(loading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(loading: false, error: 'Errore nell\'invio. Riprova.');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    required String username,
+    required String email,
+  }) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final dio = _ref.read(dioProvider);
+      final response = await dio.patch('/auth/profile', data: {
+        'name': name,
+        'username': username,
+        'email': email,
+      });
+      final data = response.data as Map<String, dynamic>;
+      state = state.copyWith(
+        user: User.fromJson(data['user'] as Map<String, dynamic>),
+        loading: false,
+      );
+      return {'ok': true, 'email_changed': data['email_changed'] as bool? ?? false};
+    } catch (e) {
+      String msg = 'Errore nel salvataggio.';
+      if (e is DioException) {
+        final body = e.response?.data;
+        if (body is Map && body['errors'] != null) {
+          msg = (body['errors'] as Map).values.expand((v) => v as List).join(' ');
+        } else if (body is Map && body['message'] != null) {
+          msg = body['message'] as String;
+        }
+      }
+      state = state.copyWith(loading: false, error: msg);
+      return {'ok': false};
+    }
+  }
+
+  Future<bool> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final dio = _ref.read(dioProvider);
+      await dio.patch('/auth/password', data: {
+        'current_password':      currentPassword,
+        'password':              newPassword,
+        'password_confirmation': newPassword,
+      });
+      state = state.copyWith(loading: false);
+      return true;
+    } catch (e) {
+      String msg = 'Errore nell\'aggiornamento.';
+      if (e is DioException) {
+        final body = e.response?.data;
+        if (body is Map && body['errors'] != null) {
+          msg = (body['errors'] as Map).values.expand((v) => v as List).join(' ');
+        } else if (body is Map && body['message'] != null) {
+          msg = body['message'] as String;
+        }
+      }
+      state = state.copyWith(loading: false, error: msg);
+      return false;
+    }
+  }
+
+  Future<bool> updateSources(List<String> sources) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final dio = _ref.read(dioProvider);
+      final response = await dio.patch('/auth/sources', data: {'preferred_sources': sources});
+      final data = response.data as Map<String, dynamic>;
+      state = state.copyWith(
+        user: User.fromJson(data['user'] as Map<String, dynamic>),
+        loading: false,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(loading: false, error: 'Errore nel salvataggio delle testate.');
       return false;
     }
   }

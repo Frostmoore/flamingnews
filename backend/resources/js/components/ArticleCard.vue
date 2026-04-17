@@ -253,7 +253,7 @@ const leanHex = {
   center:        '#6B7280',
   'center-right':'#FB923C',
   right:         '#DC2626',
-  international: '#D97706',
+  international: '#166534',
   altro:         '#7C3AED',
 };
 
@@ -313,7 +313,7 @@ const leanBgMap = {
   center:        'bg-gray-500',
   'center-right':'bg-orange-400',
   right:         'bg-red-600',
-  international: 'bg-amber-500',
+  international: 'bg-green-800',
   altro:         'bg-purple-500',
 };
 function leanBgClass(lean) { return leanBgMap[lean] ?? 'bg-gray-400'; }

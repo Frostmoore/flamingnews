@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
 
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\EnsureIsAdmin::class,
+        ]);
+
         // Le richieste mobile usano Bearer token — escludi il CSRF per tutte le API route
         $middleware->validateCsrfTokens(except: [
             'api/*',

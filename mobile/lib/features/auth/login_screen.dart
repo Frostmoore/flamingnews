@@ -13,19 +13,19 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailCtrl = TextEditingController();
+  final _loginCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
+    _loginCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _login() async {
     final success = await ref.read(authProvider.notifier).login(
-      _emailCtrl.text.trim(),
+      _loginCtrl.text.trim(),
       _passCtrl.text,
     );
     if (!mounted || !success) return;
@@ -94,10 +94,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
 
                     // Email / password
-                    AuthField(controller: _emailCtrl, label: 'Email', type: TextInputType.emailAddress),
+                    AuthField(controller: _loginCtrl, label: 'Email o Username', hint: 'tu@esempio.it oppure mario_rossi'),
                     const SizedBox(height: 12),
-                    AuthField(controller: _passCtrl, label: 'Password', obscure: true),
-                    const SizedBox(height: 20),
+                    AuthField(controller: _passCtrl, label: 'Password', obscure: true, showToggle: true),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () => context.go('/forgot-password'),
+                        child: const Text('Password dimenticata?',
+                            style: TextStyle(fontSize: 12, color: Color(0xFFC41E3A), fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                     ElevatedButton(
                       onPressed: state.loading ? null : _login,

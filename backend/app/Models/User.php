@@ -22,6 +22,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_id',
         'avatar',
         'is_premium',
+        'is_admin',
         'preferred_categories',
         'preferred_sources',
     ];
@@ -37,6 +38,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at'     => 'datetime',
             'password'              => 'hashed',
             'is_premium'            => 'boolean',
+            'is_admin'              => 'boolean',
             'preferred_categories'  => 'array',
             'preferred_sources'     => 'array',
         ];
@@ -55,6 +57,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function reads()
     {
         return $this->hasMany(UserRead::class);
+    }
+
+    public function userFeeds()
+    {
+        return $this->hasMany(UserFeed::class);
     }
 
     public function readArticles()

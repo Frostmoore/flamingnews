@@ -10,7 +10,10 @@ import 'features/feed/feed_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/categories_screen.dart';
+import 'features/auth/email_sent_screen.dart';
+import 'features/auth/forgot_password_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/my_feeds/my_feeds_screen.dart';
 
 late ProviderContainer _container;
 
@@ -40,11 +43,12 @@ final _router = GoRouter(
     final isAuth = auth.isAuthenticated;
     final path = state.uri.path;
 
-    final publicPaths = {'/login', '/register'};
+    final publicPaths = {'/login', '/register', '/email-sent', '/forgot-password'};
     final isPublic = publicPaths.contains(path);
 
     if (!isAuth && !isPublic) return '/login';
-    if (isAuth && isPublic) return '/';
+    if (isAuth && path == '/login') return '/';
+    if (isAuth && path == '/register') return '/';
 
     return null;
   },
@@ -52,13 +56,16 @@ final _router = GoRouter(
     ShellRoute(
       builder: (ctx, state, child) => _Shell(child: child),
       routes: [
-        GoRoute(path: '/',         builder: (ctx, _) => const FeedScreen()),
-        GoRoute(path: '/settings', builder: (ctx, _) => const SettingsScreen()),
+        GoRoute(path: '/',          builder: (ctx, _) => const FeedScreen()),
+        GoRoute(path: '/my-feeds',  builder: (ctx, _) => const MyFeedsScreen()),
+        GoRoute(path: '/settings',  builder: (ctx, _) => const SettingsScreen()),
       ],
     ),
-    GoRoute(path: '/login',      builder: (ctx, _) => const LoginScreen()),
-    GoRoute(path: '/register',   builder: (ctx, _) => const RegisterScreen()),
-    GoRoute(path: '/categories', builder: (ctx, _) => const CategoriesScreen()),
+    GoRoute(path: '/login',       builder: (ctx, _) => const LoginScreen()),
+    GoRoute(path: '/register',    builder: (ctx, _) => const RegisterScreen()),
+    GoRoute(path: '/categories',  builder: (ctx, _) => const CategoriesScreen()),
+    GoRoute(path: '/email-sent',       builder: (ctx, _) => const EmailSentScreen()),
+    GoRoute(path: '/forgot-password',  builder: (ctx, _) => const ForgotPasswordScreen()),
   ],
 );
 
@@ -120,7 +127,11 @@ class _Shell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final currentIndex = location.startsWith('/settings') ? 1 : 0;
+    final currentIndex = location.startsWith('/settings')
+        ? 2
+        : location.startsWith('/my-feeds')
+            ? 1
+            : 0;
 
     return Scaffold(
       body: child,
@@ -130,13 +141,19 @@ class _Shell extends StatelessWidget {
         selectedIndex: currentIndex,
         onDestinationSelected: (i) {
           if (i == 0) context.go('/');
-          if (i == 1) context.go('/settings');
+          if (i == 1) context.go('/my-feeds');
+          if (i == 2) context.go('/settings');
         },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.newspaper_outlined),
             selectedIcon: Icon(Icons.newspaper),
             label: 'Feed',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.rss_feed_outlined),
+            selectedIcon: Icon(Icons.rss_feed),
+            label: 'Feed RSS',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

@@ -544,7 +544,7 @@ const leanMeta = {
   'center':        { label: 'Centro',          short: 'Cen.',  color: '#6B7280' },
   'center-right':  { label: 'Centro-destra',   short: 'C.Dx',  color: '#FB923C' },
   'right':         { label: 'Destra',          short: 'Dx',    color: '#DC2626' },
-  'international': { label: 'Internazionale',  short: "Int'l", color: '#D97706' },
+  'international': { label: 'Internazionale',  short: "Int'l", color: '#166534' },
   'altro':         { label: 'Neutri',          short: 'Neu.',  color: '#7C3AED' },
 };
 

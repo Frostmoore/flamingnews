@@ -8,6 +8,7 @@ use App\Services\ClusteringService;
 use App\Services\RssFetcherService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class FetchNewsJob implements ShouldQueue
@@ -69,5 +70,58 @@ class FetchNewsJob implements ShouldQueue
         $clustering->reclusterRecent(hours: 48);
 
         Log::info("FetchNewsJob completato.");
+
+        $this->fetchUserFeeds($rss);
+    }
+
+    private function fetchUserFeeds(RssFetcherService $rss): void
+    {
+        $feedUrls = DB::table('user_feeds')
+            ->select('feed_url')
+            ->distinct()
+            ->pluck('feed_url');
+
+        if ($feedUrls->isEmpty()) return;
+
+        $now  = now();
+        $total = 0;
+
+        foreach ($feedUrls as $feedUrl) {
+            $items = $rss->fetchFeed($feedUrl);
+            if (empty($items)) continue;
+
+            $rows = [];
+            foreach ($items as $item) {
+                $url = $item['url'] ?? '';
+                if (empty($url)) continue;
+                $rows[] = [
+                    'feed_url'     => $feedUrl,
+                    'title'        => $item['title'],
+                    'description'  => $item['description'] ?? null,
+                    'url'          => $url,
+                    'url_to_image' => $item['image'] ?? null,
+                    'published_at' => $item['published_at'] ?? null,
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ];
+            }
+
+            if (!empty($rows)) {
+                $saved = DB::table('feed_articles')->insertOrIgnore($rows);
+                $total += $saved;
+            }
+
+            DB::table('user_feeds')->where('feed_url', $feedUrl)
+                ->update(['last_fetched_at' => $now]);
+
+            usleep(200_000);
+        }
+
+        // Elimina articoli utente più vecchi di 7 giorni
+        $deleted = DB::table('feed_articles')
+            ->where('created_at', '<', now()->subDays(7))
+            ->delete();
+
+        Log::info("FetchNewsJob user feeds: {$total} nuovi articoli, {$deleted} scaduti eliminati.");
     }
 }

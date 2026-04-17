@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TopicController;
+use App\Http\Controllers\Api\UserFeedController;
 use Illuminate\Support\Facades\Route;
 
 // Autenticazione
@@ -55,6 +56,15 @@ Route::get('/sources', fn () => response()->json(
         ->orderBy('tier')->orderBy('name')
         ->get()
 ));
+
+// Feed RSS personali (solo autenticati)
+Route::middleware('auth:sanctum')->prefix('my-feeds')->group(function () {
+    Route::get('/',              [UserFeedController::class, 'index']);
+    Route::post('/',             [UserFeedController::class, 'store']);
+    Route::delete('/{id}',       [UserFeedController::class, 'destroy']);
+    Route::get('/articles',      [UserFeedController::class, 'articles']);
+    Route::post('/{id}/refresh', [UserFeedController::class, 'refresh']);
+});
 
 // Analytics (pubblico)
 Route::get('/analytics',        [AnalyticsController::class, 'index']);

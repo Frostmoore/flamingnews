@@ -109,6 +109,97 @@
       </div>
     </div>
 
+    <!-- ── Sezione: Feed RSS personali ─────────────────────────────────── -->
+    <div class="bg-white border border-gray-200" x-data="feedsSection()">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-bold text-[#1A1A1A]">Feed RSS personali</h2>
+        <button @click="showAdd = !showAdd"
+          class="text-xs font-bold text-[#C41E3A] border border-[#C41E3A] px-3 py-1 hover:bg-red-50 transition-colors">
+          + Aggiungi
+        </button>
+      </div>
+
+      <!-- Form aggiunta -->
+      <div x-show="showAdd" x-cloak class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div x-show="addError" x-cloak class="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded" x-text="addError"></div>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Nome feed</label>
+            <input type="text" x-model="newName" placeholder="Es. Il mio blog preferito"
+              class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#C41E3A] transition-colors" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">URL feed RSS</label>
+            <input type="url" x-model="newUrl" placeholder="https://esempio.it/feed"
+              class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#C41E3A] transition-colors" />
+          </div>
+          <div class="flex gap-2">
+            <button @click="addFeed" :disabled="addLoading"
+              class="px-4 py-2 bg-[#C41E3A] text-white text-sm font-bold hover:bg-red-800 transition-colors disabled:opacity-50">
+              <span x-show="!addLoading">Aggiungi feed</span>
+              <span x-show="addLoading">Verifica in corso...</span>
+            </button>
+            <button @click="showAdd = false; addError = ''"
+              class="px-4 py-2 border border-gray-300 text-sm text-gray-600 hover:border-gray-400 transition-colors">
+              Annulla
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista feed -->
+      <div class="divide-y divide-gray-100">
+        <template x-if="feeds.length === 0">
+          <div class="px-6 py-8 text-center text-sm text-gray-400">
+            Nessun feed aggiunto. Aggiungi un feed RSS per leggerlo qui.
+          </div>
+        </template>
+        <template x-for="feed in feeds" :key="feed.id">
+          <div class="px-6 py-4">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="font-semibold text-sm text-[#1A1A1A] truncate" x-text="feed.name"></div>
+                <div class="text-xs text-gray-400 truncate mt-0.5" x-text="feed.feed_url"></div>
+                <div class="text-xs text-gray-400 mt-1">
+                  <span x-text="feed.articles_count"></span> articoli
+                  <span x-show="feed.last_fetched_at"> · aggiornato <span x-text="timeAgo(feed.last_fetched_at)"></span></span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <a :href="'/my-feeds/' + feed.id" class="text-xs font-semibold text-[#C41E3A] hover:underline">Leggi</a>
+                <button @click="refreshFeed(feed)" :disabled="feed.refreshing"
+                  class="text-xs text-gray-400 hover:text-[#1A1A1A] transition-colors" title="Aggiorna">
+                  <svg class="w-4 h-4" :class="{'animate-spin': feed.refreshing}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582M20 20v-5h-.581M5.635 15A9 9 0 1 0 4.582 9"/>
+                  </svg>
+                </button>
+                <button @click="deleteFeed(feed.id)"
+                  class="text-xs text-red-400 hover:text-red-700 transition-colors" title="Rimuovi">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── Admin (solo smp-webmaster) ───────────────────────────────── -->
+    <template x-if="user.username === 'smp-webmaster'">
+      <div class="bg-white border border-gray-200 p-4">
+        <a href="/admin"
+           class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-[#C41E3A] transition-colors">
+          <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Amministrazione
+        </a>
+      </div>
+    </template>
+
     <!-- ── Logout ──────────────────────────────────────────────────────── -->
     <div class="bg-white border border-gray-200 p-4">
       <button @click="logout"
@@ -121,6 +212,82 @@
 </div>
 
 <script>
+function feedsSection() {
+  return {
+    feeds: [],
+    showAdd: false,
+    newName: '', newUrl: '',
+    addLoading: false, addError: '',
+
+    async init() {
+      const token = localStorage.getItem('fn_token');
+      if (!token) return;
+      const res = await fetch('/api/my-feeds', { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        this.feeds = data.data.map(f => ({ ...f, refreshing: false }));
+      }
+    },
+
+    token() { return localStorage.getItem('fn_token'); },
+
+    async addFeed() {
+      if (!this.newName.trim() || !this.newUrl.trim()) return;
+      this.addLoading = true; this.addError = '';
+      try {
+        const res = await fetch('/api/my-feeds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token() },
+          body: JSON.stringify({ name: this.newName.trim(), feed_url: this.newUrl.trim() }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Errore nell\'aggiunta.');
+        this.feeds.unshift({ ...data.data, refreshing: false });
+        this.newName = ''; this.newUrl = ''; this.showAdd = false;
+      } catch (e) {
+        this.addError = e.message;
+      } finally {
+        this.addLoading = false;
+      }
+    },
+
+    async deleteFeed(id) {
+      if (!confirm('Rimuovere questo feed? Verranno eliminati anche tutti gli articoli.')) return;
+      const res = await fetch('/api/my-feeds/' + id, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + this.token(), 'Accept': 'application/json' },
+      });
+      if (res.ok) this.feeds = this.feeds.filter(f => f.id !== id);
+    },
+
+    async refreshFeed(feed) {
+      feed.refreshing = true;
+      try {
+        const res = await fetch('/api/my-feeds/' + feed.id + '/refresh', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + this.token(), 'Accept': 'application/json' },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          feed.articles_count = data.data.articles_count;
+          feed.last_fetched_at = data.data.last_fetched_at;
+        }
+      } finally {
+        feed.refreshing = false;
+      }
+    },
+
+    timeAgo(dateStr) {
+      if (!dateStr) return '';
+      const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+      if (diff < 1) return 'adesso';
+      if (diff < 60) return diff + ' min fa';
+      if (diff < 1440) return Math.floor(diff / 60) + 'h fa';
+      return Math.floor(diff / 1440) + 'g fa';
+    },
+  };
+}
+
 function profilePage() {
   return {
     user: {},
